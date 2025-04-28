@@ -1,5 +1,5 @@
 /*
-    Queue (First-In-First-Out) datastructure with configurable data bit width and size.
+    Queue (First-In-First-Out) data structure with configurable data bit width and size.
 
     Concurrent reads and writes are supported.
     Reads [Writes] on empty [full] are possible iff there is a concurrent write [read].
