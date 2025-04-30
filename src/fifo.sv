@@ -22,8 +22,8 @@ module fifo #(
     localparam PTR_WIDTH = $clog2(SIZE);
 
     logic [SIZE-1:0][WIDTH-1:0] data;
-    logic [PTR_WIDTH-1:0] first_ptr;
-    logic [PTR_WIDTH-1:0] last_ptr;
+    logic [PTR_WIDTH-1:0] read_ptr;
+    logic [PTR_WIDTH-1:0] write_ptr;
     logic [PTR_WIDTH:0] cnt;
     
     logic empty;
@@ -32,20 +32,24 @@ module fifo #(
     always_ff @( posedge clk ) begin
         if (rst_n) begin
             if (in_ready && in_valid) begin
-                data[last_ptr] <= in_data;
-                last_ptr <= last_ptr + 1;
+                // Write
+                data[write_ptr] <= in_data;
+                write_ptr <= write_ptr + 1;
                 if (out_valid && out_ready) begin
-                    first_ptr <= first_ptr + 1;
+                    // + read
+                    read_ptr <= read_ptr + 1;
                 end else begin
+                    // Write only
                     cnt <= cnt + 1;
                 end
             end else if (out_valid && out_ready) begin
-                first_ptr <= first_ptr + 1;
+                // Read only
+                read_ptr <= read_ptr + 1;
                 cnt <= cnt - 1;
             end
         end else begin
-            first_ptr <= 0;
-            last_ptr <= 0;
+            read_ptr <= 0;
+            write_ptr <= 0;
             cnt <= 0;
         end
     end
@@ -53,7 +57,7 @@ module fifo #(
     assign empty = cnt == 0;
     assign full = cnt == SIZE;
 
-    assign out_data = empty ? in_data : data[first_ptr];
+    assign out_data = empty ? in_data : data[read_ptr];
 
     assign in_ready = !full || (out_ready && out_valid);
     assign out_valid = !empty || (in_ready && in_valid);

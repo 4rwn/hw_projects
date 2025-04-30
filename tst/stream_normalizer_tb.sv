@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-module fifo_tb;
+module stream_normalizer_tb;
     logic clk = 0;
     always #10 clk = ~clk;
 
@@ -39,6 +39,7 @@ module fifo_tb;
     logic [63:0] actual_data;
     logic [2:0] actual_cnt;
     logic actual_last;
+    logic [31:0] transmission_cnt;
 
     always_ff @( posedge clk ) begin
         if (rst_n) begin
@@ -46,7 +47,10 @@ module fifo_tb;
                 actual_data <= out_data;
                 actual_cnt <= out_cnt;
                 actual_last <= out_last;
+                transmission_cnt <= transmission_cnt + 1;
             end
+        end else begin
+            transmission_cnt <= 0;
         end
     end
 
@@ -56,31 +60,84 @@ module fifo_tb;
         in_last = new_last;
         in_valid = 1;
         cycle_start();
-        while(in_ready != 1'b1) begin cycle_wait(); cycle_start(); end
+        while(in_ready != 1) begin cycle_wait(); cycle_start(); end
         cycle_wait();
         in_valid = 0;
     endtask
 
-    task check(logic [63:0] expected_data, logic[2:0] expected_cnt, logic expected_last);
-        assert (out_data == expected_data);
-        assert (out_cnt == expected_cnt);
-        assert (out_last == expected_last);
+    task check(logic [63:0] expected_data, logic [2:0] expected_cnt, logic expected_last, logic [31:0] n);
+        cycle_start();
+        assert (actual_data ==? expected_data) else $error("Assertion error on check %d: Was %x expected %x.", n, actual_data, expected_data);
+        assert (actual_cnt == expected_cnt) else $error("Assertion error on check %d: Was %x expected %x.", n, actual_cnt, expected_cnt);
+        assert (actual_last == expected_last) else $error("Assertion error on check %d: Was %x expected %x.", n, actual_last, expected_last);
+        assert (transmission_cnt == n) else $error("Assertion error on check %d: Was %x expected %x.", n, transmission_cnt, n);
+        cycle_wait();
     endtask
     
     initial begin
-        $dumpfile("waveform.vcd");
-        $dumpvars(0, fifo_tb);
+        $dumpfile("sim/waveform.vcd");
+        $dumpvars(0, stream_normalizer_tb);
 
         in_valid = 0;
         out_ready = 0;
         rst_n = 0;
-        repeat (2) @( posedge clk );
+        repeat (2) cycle_wait();
         rst_n = 1;
-
-        assert (out_valid == 0);
-        assert (in_ready == 1);
-
+        out_ready = 1;
         
+        // Full transmission split in two.
+        put(64'h0123456789abcdef, 3'd4, 1'b0);
+        cycle_start();
+        assert (transmission_cnt == 0);
+        cycle_wait();
+        put(64'h0123456789abcdef, 3'd4, 1'b1);
+        check(64'h89abcdef89abcdef, 3'd0, 1'b1, 1);
+        cycle_wait();
+
+        // Two partial transmissions exceeding the length of a single one.
+        put(64'h0123456789abcdef, 3'd7, 1'b0);
+        put(64'h0123456789abcdef, 3'd7, 1'b1);
+        check(64'hef23456789abcdef, 3'd0, 1'b0, 2);
+        check(64'hxxxx23456789abcd, 3'd6, 1'b1, 3);
+        cycle_wait();
+
+        // Single, partial, terminal transmission.
+        put(64'h0123456789abcdef, 3'd4, 1'b1);
+        check(64'hxxxxxxxx89abcdef, 3'd4, 1'b1, 4);
+        cycle_wait();
+
+        // Single, full, terminal transmission.
+        put(64'h0123456789abcdef, 3'd0, 1'b1);
+        check(64'h0123456789abcdef, 3'd0, 1'b1, 5);
+        cycle_wait();
+
+        // Full transmission on top of a partial one.
+        put(64'h0123456789abcdef, 3'd7, 1'b0);
+        put(64'h0123456789abcdef, 3'd0, 1'b1);
+        check(64'hef23456789abcdef, 3'd0, 1'b0, 6);
+        check(64'hxx0123456789abcd, 3'd7, 1'b1, 7);
+        cycle_wait();
+
+        // Full transmission split in 8 parts.
+        put(64'h0123456789abcdef, 3'd1, 1'b0);
+        put(64'h0123456789abcdef, 3'd1, 1'b0);
+        put(64'h0123456789abcdef, 3'd1, 1'b0);
+        put(64'h0123456789abcdef, 3'd1, 1'b0);
+        put(64'h0123456789abcdef, 3'd1, 1'b0);
+        put(64'h0123456789abcdef, 3'd1, 1'b0);
+        put(64'h0123456789abcdef, 3'd1, 1'b0);
+        cycle_start();
+        assert (transmission_cnt == 7);
+        cycle_wait();
+        put(64'h0123456789abcdef, 3'd1, 1'b1);
+        check(64'hefefefefefefefef, 3'd0, 1'b1, 8);
+        cycle_wait();
+
+        // Two partial transmission with length less than a single full one.
+        put(64'h0123456789abcdef, 3'd3, 1'b0);
+        put(64'h0123456789abcdef, 3'd3, 1'b1);
+        check(64'hxxxxabcdefabcdef, 3'd6, 1'b1, 9);
+        cycle_wait();
 
         $finish;
     end
