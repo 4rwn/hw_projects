@@ -55,7 +55,7 @@ module uart_tb;
     endtask
 
     initial begin
-        $dumpfile("waveform.vcd");
+        $dumpfile("sim/waveform.vcd");
         $dumpvars(0, uart_tb);
         
         in_valid = 0;

@@ -5,16 +5,22 @@ SIM = $(abspath sim)
 all : fifo uart normalizer
 
 fifo:
-	iverilog -g2012 -o $(SIM)/out $(SRC)/* $(TST)/fifo_tb.sv
+	@echo "Running FIFO test bench."
+	iverilog -g2012 -o $(SIM)/out $(SRC)/fifo.sv $(TST)/fifo_tb.sv
 	vvp sim/out
+	@echo "Done."
 
 uart:
-	iverilog -g2012 -o $(SIM)/out $(SRC)/* $(TST)/uart_tb.sv
+	@echo "Running UART test bench."
+	iverilog -g2012 -o $(SIM)/out $(SRC)/fifo.sv $(SRC)/uart/* $(TST)/uart_tb.sv
 	vvp sim/out
+	@echo "Done."
 
 normalizer:
-	iverilog -g2012 -o $(SIM)/out $(SRC)/* $(TST)/stream_normalizer_tb.sv
+	@echo "Running stream normalizer test bench."
+	iverilog -g2012 -o $(SIM)/out $(SRC)/stream_normalizer.sv $(TST)/stream_normalizer_tb.sv
 	vvp sim/out
+	@echo "Done."
 
 view:
 	gtkwave $(SIM)/waveform.vcd

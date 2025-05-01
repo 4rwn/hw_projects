@@ -97,7 +97,15 @@ module stream_normalizer_tb;
         // Two partial transmissions exceeding the length of a single one.
         put(64'h0123456789abcdef, 3'd7, 1'b0);
         put(64'h0123456789abcdef, 3'd7, 1'b1);
+        out_ready = 0;
         check(64'hef23456789abcdef, 3'd0, 1'b0, 2);
+        cycle_start();
+        assert (in_ready == 0);
+        assert (out_valid == 1 && out_last == 1);
+        assert (transmission_cnt == 2);
+        cycle_wait();
+        out_ready = 1;
+        cycle_wait();
         check(64'hxxxx23456789abcd, 3'd6, 1'b1, 3);
         cycle_wait();
 
@@ -119,7 +127,7 @@ module stream_normalizer_tb;
         cycle_wait();
 
         // Full transmission split in 8 parts.
-        put(64'h0123456789abcdef, 3'd1, 1'b0);
+        out_ready = 0;
         put(64'h0123456789abcdef, 3'd1, 1'b0);
         put(64'h0123456789abcdef, 3'd1, 1'b0);
         put(64'h0123456789abcdef, 3'd1, 1'b0);
@@ -127,8 +135,16 @@ module stream_normalizer_tb;
         put(64'h0123456789abcdef, 3'd1, 1'b0);
         put(64'h0123456789abcdef, 3'd1, 1'b0);
         cycle_start();
+        assert (in_ready == 1);
+        cycle_wait();
+        put(64'h0123456789abcdef, 3'd1, 1'b0);
+        in_valid = 1;
+        cycle_start();
+        assert (in_ready == 0);
         assert (transmission_cnt == 7);
         cycle_wait();
+        in_valid = 0;
+        out_ready = 1;
         put(64'h0123456789abcdef, 3'd1, 1'b1);
         check(64'hefefefefefefefef, 3'd0, 1'b1, 8);
         cycle_wait();

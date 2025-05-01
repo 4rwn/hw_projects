@@ -57,7 +57,7 @@ module fifo_tb;
     endtask
     
     initial begin
-        $dumpfile("waveform.vcd");
+        $dumpfile("sim/waveform.vcd");
         $dumpvars(0, fifo_tb);
 
         in_valid = 0;

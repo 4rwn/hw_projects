@@ -1,6 +1,10 @@
 # Personal Hardware Projects
 Some small, interesting hardware modules and corresponding test benches.
 
+To simulate test benches, install Icarus Verilog: `sudo apt install iverilog`.
+
+To test synthesizability use [sv2v](https://github.com/zachjs/sv2v) and Yosys.
+
 ## FIFO
 Queue (First-In-First-Out) data structure with configurable data bit width and size.
 
@@ -14,13 +18,13 @@ UART transmitter and receiver with configurable baud rate and end-to-end test be
 * The receiver samples data bits in the middle of the interval.
 * The receiver checks the low start bit again after half a baud interval of detecting it first. Otherwise, the hardware infrastructure of the channel and the behavior of the transmitter are assumed to be stable and conforming to UART specification.
 
-## AXI-type Stream Normalizer (WORK-IN-PROGRESS)
+## AXI-type Stream Normalizer
 
 ### Background
 * Consider an AXI-type stream with the usual `data` (of variable width), `last`, `ready`, and `valid` signals.
-* Optionally, a `keep` signal indicates which bytes of the data are valid. Empty transmissions are not allowed.
+* Optionally, a `keep` signal indicates which bytes of the data are valid. Empty transmissions are not allowed (i.e. with `valid = 1` but `keep = 0`).
 * A stream is normalized if all but the last transmissions are fully valid.
-* Consider a simplified (but realistic) situation where each transmission consists of a fully valid part followed by an invalid one. In this case, the keep signal can be replaced by a `cnt` representing the length of the valid part. `cnt` uses an implicit MSB (Most Significant Bit), i.e. `cnt = 0` means the transmission is fully valid.
+* Consider a simplified (but realistic) situation where each transmission consists of a fully valid part followed by an invalid one. In this case, the `keep` signal can be replaced by a `cnt` representing the length of the valid part. `cnt` uses an implicit MSB (Most Significant Bit), i.e. `cnt = 0` means the transmission is fully valid.
 
 In this setting, normalize a given stream.
 
