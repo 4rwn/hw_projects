@@ -32,3 +32,45 @@ In this setting, normalize a given stream.
 * Use buffer to store overflowing data.
 * Relay a transmission only when there is enough data (with existing overflow) to fill it.
 * Possibly explore extending it to full AXI specification, i.e. general `keep` signal with any data byte being potentially invalid. Synthesizability and congestion might become a problem.
+
+## Bitonic Sorter
+
+### Background
+A bitonic sorter is a network sorting inputs of size n = 2^D with a recursive structure of depth D.
+The recursion works as follows for depth parameter `d`, sorting direction `dir` and input size `n = 2^d`. `order[i, j, dir]` is a simple function ordering the two indices `i` and `j` according to `dir`.
+
+* `sorter(d, dir) on [0, n[`
+    * `if d = 1:`
+        * `order(0, 1, dir)`
+    * `else:`
+        1. `sorter(d-1, dir) on [0, n/2[`
+        2. `sorter(d-1, ~dir) on [n/2, n[`
+        3. `merger(d, dir) on [0, n[`
+* `merger(d, dir) on [0, n[`
+    * `if d = 1:`
+        * `order(0, 1, dir)`
+    * `else:`
+        1. `for (i in [0, n/2[) order(i, i + n/2, dir)`
+        2. `merger(d-1, dir) on [0, n/2[`
+        3. `merger(d-1, dir) on [n/2, n[`
+
+### Implementation
+The implementation allows for configurable value bit width and sorting direction (asc <> `DIRECTION = 0`; desc <> `DIRECTION = 1`).
+
+Because the base case at depth 1 is a single comparison, this design allows for very high clock rates, possibly higher than a device might facilitate. For this reason, it can make sense to put the base case at a higher depth to reduce recursion (and pipeline stages and overall latency) and increase the number of comparisons done in a single cycle (critical path). The code for the base cases are AI generated from [optimal (where known) sorting networks](https://bertdobbelaere.github.io/sorting_networks_extended.html) for 2^d inputs.
+Notice, that the merger implementation defers its base case to that of the sorter (which works because the behavior is the same), which means only the sorter needs to be modified.
+
+### Performance
+* The below table is performance data for varying base case depth.
+* Latencies refer to the clock cycles needed to get the sorted outputs and were obtained through simulation; they match our expectations based on the pipeline stages given as `D(D+1)/2` where the stages are reduced as the base case is lifted.
+* Maximal clock frequency was estimated by compiling the design for a Lattice ECP5-85k FPGA. Due to the limited size of that device, the estimation could only be done for depth 7 and 8 bit values. Unsurprisingly, the frequency drops for higher base cases, but it drops so much that even when taking into account the saved cycles, the overall temporal latency goes up significantly across the board from the standard base case at depth 1. It seems, the base case at depth 1 is the best choice so long as the device can operate at the maximum frequency.
+* The deepest structure using 32 bit values that could be synthesized with ~35 GB of memory was 8.
+
+| Base case | Base case stages | Fmax D=7, 8 bit | Latency D=7       | Logic blocks D=7, 8 bit | Logic blocks D=8, 32 bit |
+|:----------|:-----------------|:----------------|:------------------|:------------------------|:-------------------------|
+| 1         | 1                | 181 MHz (155ns) | 28 cycles (155ns) | 54785                   | 2322402                  |
+| 2         | 3                | 91 MHz (231ns)  | 21 cycles (231ns) | 49838                   | 781550                   |
+| 3         | 6                | 46 MHz (327ns)  | 15 cycles (327ns) | 48877                   | 936399                   |
+| 4         | 9                | 26 MHz (385ns)  | 10 cycles (385ns) | 85630                   | 1075225                  |
+| 5         | 14               | 16 MHz (375ns)  | 6 cycles (375ns)  | 100908                  |                       |
+| 6         | 20               | 11 MHz (273ns)  | 3 cycles (273ns)  | 92651                   |                       |

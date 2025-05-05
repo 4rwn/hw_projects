@@ -21,7 +21,7 @@ module fifo #(
 );
     localparam PTR_WIDTH = $clog2(SIZE);
 
-    logic [SIZE-1:0][WIDTH-1:0] data;
+    logic [WIDTH-1:0] data [0:SIZE-1];
     logic [PTR_WIDTH-1:0] read_ptr;
     logic [PTR_WIDTH-1:0] write_ptr;
     logic [PTR_WIDTH:0] cnt;

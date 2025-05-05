@@ -22,6 +22,12 @@ normalizer:
 	vvp sim/out
 	@echo "Done."
 
+sorter:
+	@echo "Running bitonic sorter test bench."
+	iverilog -g2012 -o $(SIM)/out $(SRC)/bitonic_sorter/*_base6.sv $(TST)/bitonic_sorter_tb.sv
+	vvp sim/out
+	@echo "Done."
+
 view:
 	gtkwave $(SIM)/waveform.vcd
 
