@@ -64,13 +64,13 @@ Notice, that the merger implementation defers its base case to that of the sorte
 * The below table is performance data for varying base case depth.
 * Latencies refer to the clock cycles needed to get the sorted outputs and were obtained through simulation; they match our expectations based on the pipeline stages given as `D(D+1)/2` where the stages are reduced as the base case is lifted.
 * Maximal clock frequency was estimated by compiling the design for a Lattice ECP5-85k FPGA. Due to the limited size of that device, the estimation could only be done for depth 7 and 8 bit values. Unsurprisingly, the frequency drops for higher base cases, but it drops so much that even when taking into account the saved cycles, the overall temporal latency goes up significantly across the board from the standard base case at depth 1. It seems, the base case at depth 1 is the best choice so long as the device can operate at the maximum frequency.
-* The deepest structure using 32 bit values that could be synthesized with ~35 GB of memory was 8.
+* The deepest structure using 32 bit values that could be synthesized with ~35 GB of memory was at depth 9.
 
-| Base case | Base case stages | Fmax D=7, 8 bit | Latency D=7       | Logic blocks D=7, 8 bit | Logic blocks D=8, 32 bit |
+| Base case | Base case stages | Fmax D=7, 8 bit | Latency D=7       | Logic blocks D=7, 8 bit | Logic blocks D=9, 32 bit |
 |:----------|:-----------------|:----------------|:------------------|:------------------------|:-------------------------|
-| 1         | 1                | 181 MHz (155ns) | 28 cycles (155ns) | 54785                   | 2322402                  |
-| 2         | 3                | 91 MHz (231ns)  | 21 cycles (231ns) | 49838                   | 781550                   |
-| 3         | 6                | 46 MHz (327ns)  | 15 cycles (327ns) | 48877                   | 936399                   |
-| 4         | 9                | 26 MHz (385ns)  | 10 cycles (385ns) | 85630                   | 1075225                  |
-| 5         | 14               | 16 MHz (375ns)  | 6 cycles (375ns)  | 100908                  |                       |
-| 6         | 20               | 11 MHz (273ns)  | 3 cycles (273ns)  | 92651                   |                       |
+| 1         | 1                | 181 MHz (155ns) | 28 cycles (155ns) | 54785                   | 5530761                  |
+| 2         | 3                | 91 MHz (231ns)  | 21 cycles (231ns) | 49838                   | 1985182                  |
+| 3         | 6                | 46 MHz (327ns)  | 15 cycles (327ns) | 48877                   | 2352990                  |
+| 4         | 9                | 26 MHz (385ns)  | 10 cycles (385ns) | 85630                   | 2476214                  |
+| 5         | 14               | 16 MHz (375ns)  | 6 cycles (375ns)  | 100908                  | 2617115                  |
+| 6         | 20               | 11 MHz (273ns)  | 3 cycles (273ns)  | 92651                   | 2813321                  |
