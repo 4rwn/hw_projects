@@ -28,6 +28,12 @@ sorter:
 	vvp sim/out
 	@echo "Done."
 
+core:
+	@echo "Running RISC-V core test bench."
+	iverilog -g2012 -I$(SRC)/riscv_core/include -o $(SIM)/out $(SRC)/riscv_core/* $(TST)/riscv_core_tb.sv
+	vvp sim/out
+	@echo "Done."
+
 view:
 	gtkwave $(SIM)/waveform.vcd
 
