@@ -94,6 +94,6 @@ module executor (
     end
 
     always_ff @( posedge clk ) begin
-        out_noop = in_noop || op == NO_OP;
+        out_noop <= in_noop || op == NO_OP;
     end
 endmodule

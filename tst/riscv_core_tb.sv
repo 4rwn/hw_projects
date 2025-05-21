@@ -19,10 +19,10 @@ module riscv_core_tb;
         $dumpfile("sim/waveform.vcd");
         $dumpvars(0, riscv_core_tb);
         
-        $readmemh("tst/program.hex", dut.instr_mem.mem);
+        $readmemh("sim/test.hex", dut.instr_mem.mem);
 
         rst_n = 0;
-        #40 rst_n = 1;
+        #50 rst_n = 1;
 
         #1000;
         $finish;

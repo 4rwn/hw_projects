@@ -24,6 +24,6 @@ module alu (
             NEQ: res <= a != b ? 32'h1 : 32'h0;
             GE: res <= a >= b ? 32'h1 : 32'h0;
             GEU: res <= $unsigned(a) >= $unsigned(b) ? 32'h1 : 32'h0;
-        endcase        
+        endcase
     end
 endmodule

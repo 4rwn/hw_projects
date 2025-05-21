@@ -13,6 +13,11 @@ module register_writeback (
     output logic [4:0] reg_wr,
     output logic [31:0] reg_wr_data
 );
+    logic [7:0] _byte;
+    logic [15:0] _half;
+    assign _byte = in_mem_rd[7:0];
+    assign _half = in_mem_rd[15:0];
+
     logic signed [31:0] in_mem_rd_ext;
     always_comb begin
         reg_wr = in_rd;
@@ -24,11 +29,11 @@ module register_writeback (
             7'b0010111: reg_wr_data = in_res;
             7'b0000011: begin
                 case (in_funct3)
-                    3'h0: in_mem_rd_ext = $signed(in_mem_rd[7:0]);
-                    3'h1: in_mem_rd_ext = $signed(in_mem_rd[15:0]);
-                    3'h2: in_mem_rd_ext = $signed(in_mem_rd[31:0]);
-                    3'h4: in_mem_rd_ext = $unsigned(in_mem_rd[7:0]);
-                    3'h4: in_mem_rd_ext = $unsigned(in_mem_rd[15:0]);
+                    3'h0: in_mem_rd_ext = $signed(_byte);
+                    3'h1: in_mem_rd_ext = $signed(_half);
+                    3'h2: in_mem_rd_ext = in_mem_rd;
+                    3'h4: in_mem_rd_ext = $unsigned(_byte);
+                    3'h5: in_mem_rd_ext = $unsigned(_half);
                     default: reg_wr = 5'h0;
                 endcase
                 reg_wr_data = in_mem_rd_ext;

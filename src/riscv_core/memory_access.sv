@@ -17,12 +17,9 @@ module memory_access (
     output logic [31:0] data_wr_addr,
     output logic [31:0] data_wr_data
 );
-    always_ff @( posedge clk ) begin
-        out_mem_rd <= data_rd_data;
-    end
-
     always_comb begin
         data_rd_addr = in_res;
+        out_mem_rd = data_rd_data;
 
         data_wr_addr = in_res;
         data_wr_data = in_rs2_data;
