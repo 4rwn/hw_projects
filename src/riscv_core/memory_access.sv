@@ -18,18 +18,20 @@ module memory_access (
     output logic [31:0] data_wr_data
 );
     always_comb begin
+        // Read
         data_rd_addr = in_res;
-        out_mem_rd = data_rd_data;
+        out_mem_rd = data_rd_data; // raw (unsigned)
 
+        // Write
         data_wr_addr = in_res;
         data_wr_data = in_rs2_data;
 
         data_wr = 2'h0;
         if (!in_noop && in_opcode == 7'b0100011) begin
             case (in_funct3)
-                3'h0: data_wr = 2'h1;
-                3'h1: data_wr = 2'h2;
-                3'h2: data_wr = 2'h3;
+                3'h0: data_wr = 2'h1; // store byte
+                3'h1: data_wr = 2'h2; // store half
+                3'h2: data_wr = 2'h3; // store word
             endcase
         end
     end

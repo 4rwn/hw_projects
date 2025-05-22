@@ -26,9 +26,8 @@ module executor (
         .res(out_res)
     );
 
-    logic [6:0] in_imm_high;
+    logic [6:0] in_imm_high; // iverilog workaround
     assign in_imm_high = in_imm[11:5];
-
     always_comb begin
         op = NO_OP;
         a = in_rs1_data;

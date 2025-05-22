@@ -4,11 +4,11 @@
 typedef enum { R, I, S, B, U, J, NO_TYPE } instr_format_t;
 
 typedef enum {
-    ADD, SUB,
-    XOR, OR, AND,
-    SLL, SRL, SRA,
-    LT, LTU, EQ, NEQ, GE, GEU,
-    NO_OP
+    ADD, SUB, // Arithmetic
+    XOR, OR, AND, // Logic
+    SLL, SRL, SRA, // Shifts
+    LT, LTU, EQ, NEQ, GE, GEU, // Comparison
+    NO_OP // Invalid or unknown
 } op_t;
 
 `endif

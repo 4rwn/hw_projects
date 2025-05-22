@@ -24,7 +24,7 @@ module riscv_core_tb;
         rst_n = 0;
         #50 rst_n = 1;
 
-        #1000;
+        #10000;
         $finish;
     end
 endmodule

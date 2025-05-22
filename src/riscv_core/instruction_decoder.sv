@@ -18,12 +18,13 @@ module instruction_decoder (
     output logic signed [31:0] out_rs2_data,
 
     // Data hazard handling
+    input logic in_noop,
     input logic [4:0] id_rd,
     input logic [4:0] ex_rd,
     input logic [4:0] mem_rd,
     output logic stall,
 
-    // Register read interface
+    // Register file read interface
     output logic [4:0] reg_rd0,
     output logic [4:0] reg_rd1,
 
@@ -57,7 +58,7 @@ module instruction_decoder (
     end
 
     // Source registers
-    logic [4:0] _reg_rd0, _reg_rd1;
+    logic [4:0] _reg_rd0, _reg_rd1; // iverilog workaround
     assign _reg_rd0 = in_instr[19:15];
     assign _reg_rd1 = in_instr[24:20];
     always_comb begin
@@ -90,6 +91,7 @@ module instruction_decoder (
         out_rs1_data <= reg_rd0_data;
         out_rs2_data <= reg_rd1_data;
 
+        // Immediate and destination register
         case (instr_format)
             R,
             I: begin
@@ -139,13 +141,15 @@ module instruction_decoder (
     always_comb begin
         stall = 1'b0;
 
-        if (id_rd != 5'b0 && (id_rd == reg_rd0 || id_rd == reg_rd1))
-            stall = 1'b1;
+        if (!in_noop) begin
+            if (id_rd != 5'b0 && (id_rd == reg_rd0 || id_rd == reg_rd1))
+                stall = 1'b1;
 
-        if (ex_rd != 5'b0 && (ex_rd == reg_rd0 || ex_rd == reg_rd1))
-            stall = 1'b1;
+            if (ex_rd != 5'b0 && (ex_rd == reg_rd0 || ex_rd == reg_rd1))
+                stall = 1'b1;
 
-        if (mem_rd != 5'b0 && (mem_rd == reg_rd0 || mem_rd == reg_rd1))
-            stall = 1'b1;
+            if (mem_rd != 5'b0 && (mem_rd == reg_rd0 || mem_rd == reg_rd1))
+                stall = 1'b1;
+        end
     end
 endmodule

@@ -134,6 +134,7 @@ module riscv_core (
         .out_rs1_data(id_rs1_data),
         .out_rs2_data(id_rs2_data),
 
+        .in_noop(flush_cnt > 2'h1),
         .id_rd(id_noop ? 5'b0 : id_rd),
         .ex_rd(ex_noop ? 5'b0 : ex_rd),
         .mem_rd(mem_noop ? 5'b0 : mem_rd),
@@ -218,7 +219,8 @@ module riscv_core (
         end
     end
 
-    // Flush
+    // Flush instructions already on the pipeline on jump
+    // by simply flagging the next 3 instructions as noop.
     logic [1:0] flush_cnt;
     always_ff @( posedge clk ) begin
         if (rst_n) begin
@@ -294,37 +296,6 @@ module riscv_core (
     /*
         Stage 5: Register write-back (WB) 
     */
-    logic [31:0] wb_addr;
-    logic [31:0] wb_instr;
-    logic wb_noop;
-    logic [6:0] wb_opcode;
-    instr_format_t wb_instr_format;
-    logic [2:0] wb_funct3;
-    logic [6:0] wb_funct7;
-    logic [4:0] wb_rs1;
-    logic [4:0] wb_rs2;
-    logic [4:0] wb_rd;
-    logic signed [31:0] wb_imm;
-    logic signed [31:0] wb_rs1_data;
-    logic signed [31:0] wb_rs2_data;
-    logic signed [31:0] wb_res;
-    always_ff @( posedge clk ) begin
-        wb_addr <= mem_addr;
-        wb_instr <= mem_instr;
-        wb_noop <= mem_noop;
-        wb_opcode <= mem_opcode;
-        wb_instr_format <= mem_instr_format;
-        wb_funct3 <= mem_funct3;
-        wb_funct7 <= mem_funct7;
-        wb_rs1 <= mem_rs1;
-        wb_rs2 <= mem_rs2;
-        wb_rd <= mem_rd;
-        wb_imm <= mem_imm;
-        wb_rs1_data <= mem_rs1_data;
-        wb_rs2_data <= mem_rs2_data;
-        wb_res <= mem_res;
-    end
-
     register_writeback reg_wb (
         .clk(clk),
 
