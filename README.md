@@ -1,4 +1,5 @@
 # Personal Hardware Projects
+
 Some small, interesting hardware modules and corresponding test benches.
 
 To simulate test benches, install Icarus Verilog: `sudo apt install iverilog`.
@@ -6,12 +7,14 @@ To simulate test benches, install Icarus Verilog: `sudo apt install iverilog`.
 To test synthesizability use [sv2v](https://github.com/zachjs/sv2v) and Yosys.
 
 ## FIFO
+
 Queue (First-In-First-Out) data structure with configurable data bit width and size.
 
 * Concurrent reads and writes are supported.
 * Reads [Writes] on empty [full] are possible iff there is a concurrent write [read].
 
 ## UART
+
 UART transmitter and receiver with configurable baud rate and end-to-end test bench.
 
 * Currently 8 data, no parity, and 1 stop bit is used (8N1). Possibly extend to be configurable to different setups (5-9 data bits, optional parity bit, 1-2 stop bits).
@@ -21,6 +24,7 @@ UART transmitter and receiver with configurable baud rate and end-to-end test be
 ## AXI-type Stream Normalizer
 
 ### Background
+
 * Consider an AXI-type stream with the usual `data` (of variable width), `last`, `ready`, and `valid` signals.
 * Optionally, a `keep` signal indicates which bytes of the data are valid. Empty transmissions are not allowed (i.e. with `valid = 1` but `keep = 0`).
 * A stream is normalized if all but the last transmissions are fully valid.
@@ -29,6 +33,7 @@ UART transmitter and receiver with configurable baud rate and end-to-end test be
 In this setting, normalize a given stream.
 
 ### Implementation
+
 * Use buffer to store overflowing data.
 * Relay a transmission only when there is enough data (with existing overflow) to fill it.
 * Possibly explore extending it to full AXI specification, i.e. general `keep` signal with any data byte being potentially invalid. Synthesizability and congestion might become a problem.
@@ -36,6 +41,7 @@ In this setting, normalize a given stream.
 ## Bitonic Sorter
 
 ### Background
+
 A bitonic sorter is a network sorting inputs of size n = 2^D with a recursive structure of depth D.
 The recursion works as follows for depth parameter `d`, sorting direction `dir` and input size `n = 2^d`. `order[i, j, dir]` is a simple function ordering the two indices `i` and `j` according to `dir`.
 
@@ -55,12 +61,14 @@ The recursion works as follows for depth parameter `d`, sorting direction `dir` 
         3. `merger(d-1, dir) on [n/2, n[`
 
 ### Implementation
+
 The implementation allows for configurable value bit width and sorting direction (asc <> `DIRECTION = 0`; desc <> `DIRECTION = 1`).
 
 Because the base case at depth 1 is a single comparison, this design allows for very high clock rates, possibly higher than a device might facilitate. For this reason, it can make sense to put the base case at a higher depth to reduce recursion (and pipeline stages and overall latency) and increase the number of comparisons done in a single cycle (critical path). The code for the base cases are AI generated from [optimal (where known) sorting networks](https://bertdobbelaere.github.io/sorting_networks_extended.html) for 2^d inputs.
 Notice, that the merger implementation defers its base case to that of the sorter (which works because the behavior is the same), which means only the sorter needs to be modified.
 
 ### Performance
+
 * The below table is performance data for varying base case depth.
 * Latencies refer to the clock cycles needed to get the sorted outputs and were obtained through simulation; they match our expectations based on the pipeline stages given as `D(D+1)/2` where the stages are reduced as the base case is lifted.
 * Maximal clock frequency was estimated by compiling the design for a Lattice ECP5-85k FPGA. Due to the limited size of that device, the estimation could only be done for depth 7 and 8 bit values. Unsurprisingly, the frequency drops for higher base cases, but it drops so much that even when taking into account the saved cycles, the overall temporal latency goes up significantly across the board from the standard base case at depth 1. It seems, the base case at depth 1 is the best choice so long as the device can operate at the maximum frequency.
@@ -74,3 +82,33 @@ Notice, that the merger implementation defers its base case to that of the sorte
 | 4         | 9                | 26 MHz (385ns)  | 10 cycles (385ns) | 85630                   | 2476214                  |
 | 5         | 14               | 16 MHz (375ns)  | 6 cycles (375ns)  | 100908                  | 2617115                  |
 | 6         | 20               | 11 MHz (273ns)  | 3 cycles (273ns)  | 92651                   | 2813321                  |
+
+## RISC-V Processor Core
+
+This is an implementation of an execution core for the RISC-V instruction set.
+
+### First Implementation
+
+The first working version supports just the base RV32I instruction set and uses a 5 stage pipeline:
+
+* IF: Instruction fetch from instruction memory
+* ID: Instruction decoding and register reads
+* EX: Execute compute operation using an ALU and evoke potential control flow transfers
+* MEM: Read/Write data memory
+* WB: Write-back result to destination register
+
+Aside from a clock and reset signal, the top-level module connects through its port to the read-only instruction memory and the data memory. The design can be synthesized for an iCE40 FPGA using 4685 logic cells and has a maximal frequency of 54.59 MHz after PnR.
+
+#### Data hazards
+
+A pipelined design leads to some correctness pitfalls that require addressing. For one, a source register can be read for an instruction at ID when an earlier instruction has not yet gotten the change to write it during WB. To avoid reading an old register value, the simplest solution is to stall the pipeline stages up to and including ID when it is detected that one of the source registers is equal to the destination register of the instruction currently in EX, MEM, or WB. Those three pipeline stages keep executing normally and after at most 3 cycles the required register will have been written and the instruction stalled in ID can proceed.
+
+#### Flushing instructions on control flow transfer
+
+A similar consequence of the pipelined design as data hazards is the fact that at the time when the decision is made to take a branch, 3 more instructions are already in the pipeline. In this case, there is nothing to do but flush those 3 invalid instructions. We implement this by simply invalidating the next 3 instructions passing the EX stage, since they have no effect on state before then, with the slight exception of stalling: One has to be careful not to stall on behalf of instructions that will be flushed further down the line.
+
+### Future Work
+
+* Stalling a register read for 3 cycles if it immediately follows a write of the same register is hugely inefficient, especially considering that the result that will be written in WB is already available after EX. A desirable optimization would thus be to forward result values from the EX or MEM stages to ID in order to limit stalled cycles. If done correctly, this should completely avoid stalling in all cases but one: Reading a register for an instruction that immediately followed a memory load on the same register will still require a stall cycle because the stage where the value is needed and the one where it is ready are 2 apart.
+* Similarly, there are ways to limit the amount of work that is lost as a result of instructions having to be flushed in branching. By only diverting control flow after EX we incur the maximal penalty on each jump and branch instruction. Different kinds of instructions can be optimized differently in this regard: A JAL can be pre-decoded during IF and the jump executed for the next fetch, avoiding completely having to flush anything. A JALR cannot be dealt with in the same way because the jump address depends on a source register, but these jump instructions are mainly used for function calls and returns and thus are not as performance critical anyway. On the other hand, branches are very important for performance and a branch predictor can offer many benefits. It works in the IF stage and tries to anticipate whether a branch will be taken solely based on its address.
+* Extend supported instructions to multiplications/divisions or floating-point operations.
