@@ -4,6 +4,7 @@ module instruction_decoder (
     input logic clk,
 
     input logic [31:0] in_instr,
+    input logic in_noop,
 
     output logic out_noop,
     output logic [6:0] out_opcode,
@@ -18,7 +19,6 @@ module instruction_decoder (
     output logic signed [31:0] out_rs2_data,
 
     // Data hazard handling
-    input logic in_noop,
     input logic [4:0] id_rd,
     input logic [4:0] ex_rd,
     input logic [4:0] mem_rd,
@@ -140,7 +140,6 @@ module instruction_decoder (
     // by an earlier instruction still in the pipeline.
     always_comb begin
         stall = 1'b0;
-
         if (!in_noop) begin
             if (id_rd != 5'b0 && (id_rd == reg_rd0 || id_rd == reg_rd1))
                 stall = 1'b1;

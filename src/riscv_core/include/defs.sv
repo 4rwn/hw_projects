@@ -9,6 +9,6 @@ typedef enum {
     SLL, SRL, SRA, // Shifts
     LT, LTU, EQ, NEQ, GE, GEU, // Comparison
     NO_OP // Invalid or unknown
-} op_t;
+} alu_op_t;
 
 `endif

@@ -19,8 +19,7 @@ module memory #(
     
     logic [7:0] mem [SIZE-1:0]; // byte-addressable
 
-    logic [ADDR_BITS-1:0] _rd_addr;
-    logic [ADDR_BITS-1:0] _wr_addr;
+    logic [ADDR_BITS-1:0] _rd_addr, _wr_addr;
     assign _rd_addr = rd_addr[ADDR_BITS-1:0];
     assign _wr_addr = wr_addr[ADDR_BITS-1:0];
 
@@ -32,9 +31,14 @@ module memory #(
         rd_data[31:24] <= mem[_rd_addr + 3];
 
         // Write (0, 1, 2, or 4 bytes)
-        if (wr > 0) mem[_wr_addr] <= wr_data[7:0];
-        if (wr > 1) mem[_wr_addr + 1] <= wr_data[15:8];
-        if (wr > 2) begin
+        if (wr == 2'h1) begin
+            mem[_wr_addr] <= wr_data[7:0];
+        end else if (wr == 2'h2) begin
+            mem[_wr_addr] <= wr_data[7:0];
+            mem[_wr_addr + 1] <= wr_data[15:8];
+        end else if (wr == 2'h3) begin
+            mem[_wr_addr] <= wr_data[7:0];
+            mem[_wr_addr + 1] <= wr_data[15:8];
             mem[_wr_addr + 2] <= wr_data[23:16];
             mem[_wr_addr + 3] <= wr_data[31:24];
         end

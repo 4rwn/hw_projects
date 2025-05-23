@@ -1,9 +1,9 @@
 `include "defs.sv"
 
-module alu (
+module arithmetic_logic_unit (
     input logic clk,
 
-    input op_t op,
+    input alu_op_t op,
     input logic signed [31:0] a,
     input logic signed [31:0] b,
     output logic signed [31:0] res

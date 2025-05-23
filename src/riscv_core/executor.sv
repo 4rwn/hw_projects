@@ -15,12 +15,11 @@ module executor (
     output logic out_noop,
     output logic signed [31:0] out_res
 );
-    op_t op;
-    logic signed [31:0] a;
-    logic signed [31:0] b;
-    alu alu (
+    alu_op_t alu_op;
+    logic signed [31:0] a, b;
+    arithmetic_logic_unit alu (
         .clk(clk),
-        .op(op),
+        .op(alu_op),
         .a(a),
         .b(b),
         .res(out_res)
@@ -29,63 +28,63 @@ module executor (
     logic [6:0] in_imm_high; // iverilog workaround
     assign in_imm_high = in_imm[11:5];
     always_comb begin
-        op = NO_OP;
+        alu_op = NO_OP;
         a = in_rs1_data;
         b = in_rs2_data;
         case (in_opcode)
             7'b0110011: begin // Register operations
                 case (in_funct3)
-                    3'h0: if (in_funct7 == 7'h00) op = ADD;
-                        else if (in_funct7 == 7'h20) op = SUB;
-                    3'h4: if (in_funct7 == 7'h00) op = XOR;
-                    3'h6: if (in_funct7 == 7'h00) op = OR;
-                    3'h7: if (in_funct7 == 7'h00) op = AND;
-                    3'h1: if (in_funct7 == 7'h00) op = SLL;
-                    3'h5: if (in_funct7 == 7'h00) op = SRL;
-                        else if (in_funct7 == 7'h20) op = SRA;
-                    3'h2: if (in_funct7 == 7'h00) op = LT;
-                    3'h3: if (in_funct7 == 7'h00) op = LTU;
+                    3'h0: if (in_funct7 == 7'h00) alu_op = ADD;
+                        else if (in_funct7 == 7'h20) alu_op = SUB;
+                    3'h4: if (in_funct7 == 7'h00) alu_op = XOR;
+                    3'h6: if (in_funct7 == 7'h00) alu_op = OR;
+                    3'h7: if (in_funct7 == 7'h00) alu_op = AND;
+                    3'h1: if (in_funct7 == 7'h00) alu_op = SLL;
+                    3'h5: if (in_funct7 == 7'h00) alu_op = SRL;
+                        else if (in_funct7 == 7'h20) alu_op = SRA;
+                    3'h2: if (in_funct7 == 7'h00) alu_op = LT;
+                    3'h3: if (in_funct7 == 7'h00) alu_op = LTU;
                 endcase
             end 
             7'b0010011: begin // Immediate operations
                 case (in_funct3)
-                    3'h0: op = ADD;
-                    3'h4: op = XOR;
-                    3'h6: op = OR;
-                    3'h7: op = AND;
-                    3'h1: if (in_imm_high == 7'h00) op = SLL;
-                    3'h5: if (in_imm_high == 7'h00) op = SRL;
-                        else if (in_imm_high == 7'h20) op = SRA;
-                    3'h2: op = LT;
-                    3'h3: op = LTU;
+                    3'h0: alu_op = ADD;
+                    3'h4: alu_op = XOR;
+                    3'h6: alu_op = OR;
+                    3'h7: alu_op = AND;
+                    3'h1: if (in_imm_high == 7'h00) alu_op = SLL;
+                    3'h5: if (in_imm_high == 7'h00) alu_op = SRL;
+                        else if (in_imm_high == 7'h20) alu_op = SRA;
+                    3'h2: alu_op = LT;
+                    3'h3: alu_op = LTU;
                 endcase
 
                 b = in_imm;
-                if (op == SLL || op == SRL || op == SRA) begin
+                if (alu_op == SLL || alu_op == SRL || alu_op == SRA) begin
                     b[31:5] = {27{1'b0}};
                 end
             end
             7'b0000011, 7'b0100011: begin // Loads and Stores
-                op = ADD;
+                alu_op = ADD;
                 b = in_imm;
             end
             7'b1100011: begin // Branches
                 case (in_funct3)
-                    3'h0: op = EQ;
-                    3'h1: op = NEQ;
-                    3'h4: op = LT;
-                    3'h5: op = GE;
-                    3'h6: op = LTU;
-                    3'h7: op = GEU;
+                    3'h0: alu_op = EQ;
+                    3'h1: alu_op = NEQ;
+                    3'h4: alu_op = LT;
+                    3'h5: alu_op = GE;
+                    3'h6: alu_op = LTU;
+                    3'h7: alu_op = GEU;
                 endcase
             end
             7'b1101111, 7'b1100111: begin // Jump and link
-                op = ADD;
+                alu_op = ADD;
                 a = in_addr;
                 b = 32'h4;
             end
             7'b0110111, 7'b0010111: begin // Load upper immediate
-                op = ADD;
+                alu_op = ADD;
                 a = in_addr;
                 b = in_imm;
             end
@@ -93,6 +92,6 @@ module executor (
     end
 
     always_ff @( posedge clk ) begin
-        out_noop <= in_noop || op == NO_OP;
+        out_noop <= in_noop || alu_op == NO_OP;
     end
 endmodule

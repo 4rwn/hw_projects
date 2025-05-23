@@ -2,12 +2,21 @@
 
 module riscv_core (
     input logic clk,
-    input logic rst_n
-);
-    localparam INSTR_MEM_SIZE = 256;
-    localparam DATA_MEM_SIZE = 1024;
+    input logic rst_n,
 
-    // Program counter
+    // Instruction memory interface
+    output logic [31:0] instr_rd_addr,
+    input logic [31:0] instr_rd_data,
+
+    // Data memory interface
+    output logic [31:0] data_rd_addr,
+    input logic [31:0] data_rd_data,
+
+    output logic [1:0] data_wr,
+    output logic [31:0] data_wr_addr,
+    output logic [31:0] data_wr_data
+);
+    // Control flow
     logic [31:0] pc;
     logic stall;
     logic jmp;
@@ -24,29 +33,11 @@ module riscv_core (
         end
     end
 
-    // Instruction memory
-    logic [31:0] instr;
-    memory #(
-        .SIZE(INSTR_MEM_SIZE)
-    ) instr_mem (
-        .clk(clk),
-
-        .rd_addr(stall ? if_addr : pc),
-        .rd_data(instr),
-
-        .wr(2'b00),
-        .wr_addr(0),
-        .wr_data(0)
-    );
+    assign instr_rd_addr = stall ? if_addr : pc;
 
     // Register file
-    logic [4:0] reg_rd0;
-    logic [4:0] reg_rd1;
-    logic [31:0] reg_rd0_data;
-    logic [31:0] reg_rd1_data;
-    logic [4:0] reg_wr;
-    logic [31:0] reg_wr_data;
-
+    logic [4:0] reg_rd0, reg_rd1, reg_wr;
+    logic [31:0] reg_rd0_data, reg_rd1_data, reg_wr_data;
     register_file regs (
         .clk(clk),
 
@@ -59,40 +50,20 @@ module riscv_core (
         .wr_data(reg_wr_data)
     );
 
-    // Data memory
-    logic [31:0] data_rd_addr;
-    logic [31:0] data_rd_data;
-    logic [1:0] data_wr;
-    logic [31:0] data_wr_addr;
-    logic [31:0] data_wr_data;
-
-    memory #(
-        .SIZE(DATA_MEM_SIZE)
-    ) data_mem (
-        .clk(clk),
-
-        .rd_addr(data_rd_addr),
-        .rd_data(data_rd_data),
-
-        .wr(data_wr),
-        .wr_addr(data_wr_addr),
-        .wr_data(data_wr_data)
-    );
-
 
 
     /*
         Stage 1: Instruction fetch (IF)
     */
     logic [31:0] if_addr;
-    logic [31:0] if_instr;
     always_ff @( posedge clk ) begin
         if (!stall) begin
             if_addr <= pc;
         end
     end
 
-    assign if_instr = rst_n ? instr : 32'h0;
+    logic [31:0] if_instr;
+    assign if_instr = rst_n ? instr_rd_data : 32'h0;
 
     
 
@@ -111,16 +82,13 @@ module riscv_core (
     instr_format_t id_instr_format;
     logic [2:0] id_funct3;
     logic [6:0] id_funct7;
-    logic [4:0] id_rs1;
-    logic [4:0] id_rs2;
-    logic [4:0] id_rd;
-    logic signed [31:0] id_imm;
-    logic signed [31:0] id_rs1_data;
-    logic signed [31:0] id_rs2_data;
+    logic [4:0] id_rs1, id_rs2, id_rd;
+    logic signed [31:0] id_imm, id_rs1_data, id_rs2_data;
     instruction_decoder decoder (
         .clk(clk),
 
         .in_instr(if_instr),
+        .in_noop(flush_cnt > 2'h1),
 
         .out_noop(id_noop),
         .out_opcode(id_opcode),
@@ -134,7 +102,6 @@ module riscv_core (
         .out_rs1_data(id_rs1_data),
         .out_rs2_data(id_rs2_data),
 
-        .in_noop(flush_cnt > 2'h1),
         .id_rd(id_noop ? 5'b0 : id_rd),
         .ex_rd(ex_noop ? 5'b0 : ex_rd),
         .mem_rd(mem_noop ? 5'b0 : mem_rd),
@@ -153,18 +120,13 @@ module riscv_core (
     */
     logic [31:0] ex_addr;
     logic [31:0] ex_instr;
-    logic _ex_noop;
-    logic ex_noop;
+    logic _ex_noop, ex_noop;
     logic [6:0] ex_opcode;
     instr_format_t ex_instr_format;
     logic [2:0] ex_funct3;
     logic [6:0] ex_funct7;
-    logic [4:0] ex_rs1;
-    logic [4:0] ex_rs2;
-    logic [4:0] ex_rd;
-    logic signed [31:0] ex_imm;
-    logic signed [31:0] ex_rs1_data;
-    logic signed [31:0] ex_rs2_data;
+    logic [4:0] ex_rs1, ex_rs2, ex_rd;
+    logic signed [31:0] ex_imm, ex_rs1_data, ex_rs2_data;
     always_ff @( posedge clk ) begin
         ex_addr <= id_addr;
         ex_instr <= id_instr;
@@ -248,13 +210,8 @@ module riscv_core (
     instr_format_t mem_instr_format;
     logic [2:0] mem_funct3;
     logic [6:0] mem_funct7;
-    logic [4:0] mem_rs1;
-    logic [4:0] mem_rs2;
-    logic [4:0] mem_rd;
-    logic signed [31:0] mem_imm;
-    logic signed [31:0] mem_rs1_data;
-    logic signed [31:0] mem_rs2_data;
-    logic signed [31:0] mem_res;
+    logic [4:0] mem_rs1, mem_rs2, mem_rd;
+    logic signed [31:0] mem_imm, mem_rs1_data, mem_rs2_data, mem_res;
     always_ff @( posedge clk ) begin
         mem_addr <= ex_addr;
         mem_instr <= ex_instr;
