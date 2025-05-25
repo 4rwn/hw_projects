@@ -102,9 +102,18 @@ module riscv_core (
         .out_rs1_data(id_rs1_data),
         .out_rs2_data(id_rs2_data),
 
+        .id_opcode(id_opcode),
         .id_rd(id_noop ? 5'b0 : id_rd),
+        .id_imm(id_imm),
+        .ex_opcode(ex_opcode),
         .ex_rd(ex_noop ? 5'b0 : ex_rd),
+        .ex_imm(ex_imm),
+        .ex_res(ex_res),
+        .mem_opcode(mem_opcode),
         .mem_rd(mem_noop ? 5'b0 : mem_rd),
+        .mem_imm(mem_imm),
+        .mem_res(mem_res),
+        .mem_mem_rd(mem_mem_rd),
         .stall(stall),
 
         .reg_rd0(reg_rd0),

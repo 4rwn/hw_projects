@@ -58,7 +58,6 @@ module riscv_core_tb;
         .data_wr_data(data_wr_data)
     );
 
-
     initial begin
         $dumpfile("sim/waveform.vcd");
         $dumpvars(0, riscv_core_tb);
