@@ -158,6 +158,7 @@ module riscv_core (
         .ex_opcode(ex_opcode),
         .ex_rd(ex_noop ? 5'b0 : ex_rd),
         .ex_imm(ex_imm),
+        .alu_opcode(alu_opcode),
         .alu_rd(alu_noop ? 5'b0 : alu_rd),
         .alu_imm(alu_imm),
         .alu_res(alu_res),
