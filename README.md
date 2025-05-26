@@ -135,6 +135,12 @@ Seeing that the RR stage by itself did not do much for Fmax and the critical pat
 
 Because the computation result is now known one stage later (and one further away from RR), instructions that depend on an earlier one (that is not a `lui`) stall for one cycle longer than before.
 
+### Single-cycle Multiplication Extension
+
+To see the effects on area and frequency, I extended the design to support the RV32M instructions set including multiplication, division and remainder operations. I did so in the simplest possible way, by letting the synthesizer decide on a single-cycle implementation, basically treating these complex operations just like any other simpler one. Unsurprisingly, the results were nothing short of catastrophic: The core used 33177 logic cells (11.6x) at which point it was of course too large to be routed for an iCE40 FPGA, but it can be suspected that it would wreak havoc on the clock frequency as well.
+
+I undid this change again because it is not sensible by any stretch of the imagination, the respective Git commit is TODO.
+
 ### Future Work
 
 * Branch prediction: There are ways to limit the amount of work that is lost as a result of instructions having to be flushed in branching. By only diverting control flow after EX we incur the maximal penalty on each jump and branch instruction. Different kinds of instructions can be optimized differently in this regard: A JAL can be pre-decoded during IF and the jump executed for the next fetch, avoiding completely having to flush anything. A JALR cannot be dealt with in the same way because the jump address depends on a source register, but these jump instructions are mainly used for function calls and returns and thus are not as performance critical anyway. On the other hand, branches are very important for performance and a branch predictor can offer many benefits. It works in the IF stage and tries to anticipate whether a branch will be taken solely based on its address.
