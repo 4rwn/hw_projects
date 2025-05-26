@@ -103,11 +103,11 @@ Note that the use of open-source tools for simulation and synthesis means that s
 
 #### Data hazards
 
-A pipelined design leads to some correctness pitfalls that require addressing. For one, a source register can be read for an instruction at ID when an earlier instruction has not yet gotten the change to write it during WB. To avoid reading an old register value, the simplest solution is to stall the pipeline stages up to and including ID when it is detected that one of the source registers is equal to the destination register of the instruction currently in EX, MEM, or WB. Those three pipeline stages keep executing normally and after at most 3 cycles the required register will have been written and the instruction stalled in ID can proceed.
+A pipelined design leads to some correctness pitfalls that require addressing. For one, a source register can be read for an instruction at ID when an earlier instruction has not yet gotten the chance to write it during WB. To avoid reading an old register value, the simplest solution is to stall the pipeline stages up to and including ID when it is detected that one of the source registers is equal to the destination register of the instruction currently in EX, MEM, or WB. Those three pipeline stages keep executing normally and after at most 3 cycles the required register will have been written and the instruction stalled in ID can proceed.
 
 #### Flushing instructions on control flow transfer
 
-A similar consequence of the pipelined design as data hazards is the fact that at the time when the decision is made to take a branch, 3 more instructions are already in the pipeline. In this case, there is nothing to do but flush those 3 invalid instructions. We implement this by simply invalidating the next 3 instructions passing the EX stage, since they have no effect on state before then, with the slight exception of stalling: One has to be careful not to stall on behalf of instructions that will be flushed further down the line.
+A similar consequence of the pipelined design as data hazards is the fact that at the time when the decision is made to take a branch, 3 more instructions are already in the pipeline. In this case, there is nothing to do but flush those 3 invalid instructions. We implement this by simply invalidating all the instructions in the previous stages of the pipeline.
 
 ### Register Forwarding
 
@@ -119,13 +119,21 @@ Stalling a register read for 3 cycles if it immediately follows a write of the s
 
 My thinking in the section above turned out to be slightly wrong: stalling is still required in many cases with only register forwarding. When a register is needed that was written by the previous instruction (say an `add`), that instruction is currently in EX and the result that is needed for ID will only be available at the end of this cycle, meaning decoding can only take place in the next one. In this case, one stalled cycle is needed as opposed to 3 without register forwarding.
 
-Looking at two dependent instructions which immediately follow one another, we can say the following about the required stalling depending on the type of the first instruction: A `lui` instruction incurs no stalling (because its result is immediately available after ID in the immediate), a load instruction incurs 2 stalled cycles (because its result is only available after MEM) and everything else 1 (because the result is available after EX, as described above). All of these cases resulted in 3 stall cycles previously.
+Looking at two dependent instructions which immediately follow one another, we can say the following about the required stalling depending on the type of the earlier instruction: A `lui` instruction incurs no stalling (because its result is immediately available after ID in the immediate), a load instruction incurs 2 stalled cycles (because its result is only available after MEM) and everything else 1 (because the result is available after EX, as described above). All of these cases resulted in 3 stall cycles previously.
 
 Adding register forwarding from the ID, EX, and MEM stages to the ID stage resulted in the usage of 4968 logic cells (+6%) and a reduced maximal clock frequency of 50.65 MHz (-7.8%).
 
 ### Register Reading Stage
 
 I deepend the pipeline with another stage for register reading (RR) between ID and EX. The effects are somewhat peculiar: While Fmax is only minimally improved to 51.03 MHz (+0.8%), the design now uses just 2658 logic cells (-46.5%). I rewrote the flushing logic on branches and jumps and some other things at the same time though, so that might be playing into this.
+
+Of course, adding this new stage has the downside that one more instruction has to be flushed on a branch or jump.
+
+### Dedicated ALU Stage
+
+Seeing that the RR stage by itself did not do much for Fmax and the critical path involved the adder in EX, I moved the Arithmetic Logic Unit to its own stage (ALU). The result uses a little more resources at 2841 logic cells (+6.9%) but has an Fmax of a whopping 74.13 MHz (+45.3%).
+
+Because the computation result is now known one stage later (and one further away from RR), instructions that depend on an earlier one (that is not a `lui`) stall for one cycle longer than before.
 
 ### Future Work
 
