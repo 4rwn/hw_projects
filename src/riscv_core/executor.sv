@@ -31,27 +31,27 @@ module executor (
                 case (in_funct3)
                     3'h0: if (in_funct7 == 7'h00) op = ADD;
                         else if (in_funct7 == 7'h20) op = SUB;
-                    3'h4: if (in_funct7 == 7'h00) op = XOR;
-                    3'h6: if (in_funct7 == 7'h00) op = OR;
-                    3'h7: if (in_funct7 == 7'h00) op = AND;
                     3'h1: if (in_funct7 == 7'h00) op = SLL;
-                    3'h5: if (in_funct7 == 7'h00) op = SRL;
-                        else if (in_funct7 == 7'h20) op = SRA;
                     3'h2: if (in_funct7 == 7'h00) op = LT;
                     3'h3: if (in_funct7 == 7'h00) op = LTU;
+                    3'h4: if (in_funct7 == 7'h00) op = XOR;
+                    3'h5: if (in_funct7 == 7'h00) op = SRL;
+                        else if (in_funct7 == 7'h20) op = SRA;
+                    3'h6: if (in_funct7 == 7'h00) op = OR;
+                    3'h7: if (in_funct7 == 7'h00) op = AND;
                 endcase
             end 
             7'b0010011: begin // Immediate operations
                 case (in_funct3)
                     3'h0: op = ADD;
-                    3'h4: op = XOR;
-                    3'h6: op = OR;
-                    3'h7: op = AND;
                     3'h1: if (in_imm_high == 7'h00) op = SLL;
-                    3'h5: if (in_imm_high == 7'h00) op = SRL;
-                        else if (in_imm_high == 7'h20) op = SRA;
                     3'h2: op = LT;
                     3'h3: op = LTU;
+                    3'h4: op = XOR;
+                    3'h5: if (in_imm_high == 7'h00) op = SRL;
+                        else if (in_imm_high == 7'h20) op = SRA;
+                    3'h6: op = OR;
+                    3'h7: op = AND;
                 endcase
 
                 src2 = in_imm;
