@@ -121,7 +121,11 @@ My thinking in the section above turned out to be slightly wrong: stalling is st
 
 Looking at two dependent instructions which immediately follow one another, we can say the following about the required stalling depending on the type of the first instruction: A `lui` instruction incurs no stalling (because its result is immediately available after ID in the immediate), a load instruction incurs 2 stalled cycles (because its result is only available after MEM) and everything else 1 (because the result is available after EX, as described above). All of these cases resulted in 3 stall cycles previously.
 
-Adding register forwarding from the ID, EX, and MEM stages to the ID stage resulted in the usage of 283 more logic cells (+6%) and a reduced maximal clock frequency of 50.65 MHz (-7.8%).
+Adding register forwarding from the ID, EX, and MEM stages to the ID stage resulted in the usage of 4968 logic cells (+6%) and a reduced maximal clock frequency of 50.65 MHz (-7.8%).
+
+### Register Reading Stage
+
+I deepend the pipeline with another stage for register reading (RR) between ID and EX. The effects are somewhat peculiar: While Fmax is only minimally improved to 51.03 MHz (+0.8%), the design now uses just 2658 logic cells (-46.5%). I rewrote the flushing logic on branches and jumps and some other things at the same time though, so that might be playing into this.
 
 ### Future Work
 

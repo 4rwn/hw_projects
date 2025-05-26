@@ -56,10 +56,12 @@ module riscv_core (
         Stage 1: Instruction fetch (IF)
     */
     logic [31:0] if_addr;
+    logic if_noop;
     always_ff @( posedge clk ) begin
         if (!stall) begin
             if_addr <= pc;
         end
+        if_noop <= jmp;
     end
 
     logic [31:0] if_instr;
@@ -72,23 +74,25 @@ module riscv_core (
     */
     logic [31:0] id_addr;
     logic [31:0] id_instr;
+    logic id_noop;
     always_ff @( posedge clk ) begin
-        id_addr <= if_addr;
-        id_instr <= if_instr;
+        if (!stall) begin
+            id_addr <= if_addr;
+            id_instr <= if_instr;
+        end
     end
 
-    logic id_noop;
     logic [6:0] id_opcode;
     instr_format_t id_instr_format;
     logic [2:0] id_funct3;
     logic [6:0] id_funct7;
     logic [4:0] id_rs1, id_rs2, id_rd;
-    logic signed [31:0] id_imm, id_rs1_data, id_rs2_data;
+    logic signed [31:0] id_imm;
     instruction_decoder decoder (
         .clk(clk),
 
         .in_instr(if_instr),
-        .in_noop(flush_cnt > 2'h1),
+        .in_noop(if_noop || jmp),
 
         .out_noop(id_noop),
         .out_opcode(id_opcode),
@@ -99,12 +103,58 @@ module riscv_core (
         .out_rs2(id_rs2),
         .out_rd(id_rd),
         .out_imm(id_imm),
-        .out_rs1_data(id_rs1_data),
-        .out_rs2_data(id_rs2_data),
 
-        .id_opcode(id_opcode),
-        .id_rd(id_noop ? 5'b0 : id_rd),
-        .id_imm(id_imm),
+        .stall(stall)
+    );
+    
+
+
+    /*
+        Stage 3: Register read (RR)
+    */
+    logic [31:0] rr_addr;
+    logic [31:0] rr_instr;
+    logic rr_noop;
+    logic [6:0] rr_opcode;
+    instr_format_t rr_instr_format;
+    logic [2:0] rr_funct3;
+    logic [6:0] rr_funct7;
+    logic [4:0] rr_rs1, rr_rs2, rr_rd;
+    logic signed [31:0] rr_imm;
+    always_ff @( posedge clk ) begin
+        rr_addr <= id_addr;
+        rr_instr <= id_instr;
+        rr_opcode <= id_opcode;
+        rr_instr_format <= id_instr_format;
+        rr_funct3 <= id_funct3;
+        rr_funct7 <= id_funct7;
+        rr_rs1 <= id_rs1;
+        rr_rs2 <= id_rs2;
+        rr_rd <= id_rd;
+        rr_imm <= id_imm;
+    end
+
+    assign reg_rd0 = id_rs1;
+    assign reg_rd1 = id_rs2;
+
+    logic signed [31:0] rr_rs1_data, rr_rs2_data;
+    register_reader reg_read (
+        .clk(clk),
+
+        .in_noop(id_noop || jmp),
+        .in_rs1(id_rs1),
+        .in_rs2(id_rs2),
+
+        .reg_rd0_data(reg_rd0_data),
+        .reg_rd1_data(reg_rd1_data),
+
+        .out_noop(rr_noop),
+        .out_rs1_data(rr_rs1_data),
+        .out_rs2_data(rr_rs2_data),
+
+        .rr_opcode(rr_opcode),
+        .rr_rd(rr_noop ? 5'b0 : rr_rd),
+        .rr_imm(rr_imm),
         .ex_opcode(ex_opcode),
         .ex_rd(ex_noop ? 5'b0 : ex_rd),
         .ex_imm(ex_imm),
@@ -114,22 +164,18 @@ module riscv_core (
         .mem_imm(mem_imm),
         .mem_res(mem_res),
         .mem_mem_rd(mem_mem_rd),
-        .stall(stall),
 
-        .reg_rd0(reg_rd0),
-        .reg_rd1(reg_rd1),
-        .reg_rd0_data(reg_rd0_data),
-        .reg_rd1_data(reg_rd1_data)
+        .stall(stall)
     );
-    
+
 
 
     /*
-        Stage 3: Execution (EX)
+        Stage 4: Execution (EX)
     */
     logic [31:0] ex_addr;
     logic [31:0] ex_instr;
-    logic _ex_noop, ex_noop;
+    logic ex_noop;
     logic [6:0] ex_opcode;
     instr_format_t ex_instr_format;
     logic [2:0] ex_funct3;
@@ -137,51 +183,47 @@ module riscv_core (
     logic [4:0] ex_rs1, ex_rs2, ex_rd;
     logic signed [31:0] ex_imm, ex_rs1_data, ex_rs2_data;
     always_ff @( posedge clk ) begin
-        ex_addr <= id_addr;
-        ex_instr <= id_instr;
-        ex_opcode <= id_opcode;
-        ex_instr_format <= id_instr_format;
-        ex_funct3 <= id_funct3;
-        ex_funct7 <= id_funct7;
-        ex_rs1 <= id_rs1;
-        ex_rs2 <= id_rs2;
-        ex_rd <= id_rd;
-        ex_imm <= id_imm;
-        ex_rs1_data <= id_rs1_data;
-        ex_rs2_data <= id_rs2_data;
+        ex_addr <= rr_addr;
+        ex_instr <= rr_instr;
+        ex_opcode <= rr_opcode;
+        ex_instr_format <= rr_instr_format;
+        ex_funct3 <= rr_funct3;
+        ex_funct7 <= rr_funct7;
+        ex_rs1 <= rr_rs1;
+        ex_rs2 <= rr_rs2;
+        ex_rd <= rr_rd;
+        ex_imm <= rr_imm;
+        ex_rs1_data <= rr_rs1_data;
+        ex_rs2_data <= rr_rs2_data;
     end
 
     logic signed [31:0] ex_res;
     executor executor (
         .clk(clk),
 
-        .in_addr(id_addr),
-        .in_noop(id_noop),
-        .in_opcode(id_opcode),
-        .in_funct3(id_funct3),
-        .in_funct7(id_funct7),
-        .in_rs1_data(id_rs1_data),
-        .in_rs2_data(id_rs2_data),
-        .in_imm(id_imm),
+        .in_addr(rr_addr),
+        .in_noop(rr_noop || jmp),
+        .in_opcode(rr_opcode),
+        .in_funct3(rr_funct3),
+        .in_funct7(rr_funct7),
+        .in_rs1_data(rr_rs1_data),
+        .in_rs2_data(rr_rs2_data),
+        .in_imm(rr_imm),
 
-        .out_noop(_ex_noop),
+        .out_noop(ex_noop),
         .out_res(ex_res)
     );
 
     // Branches and jumps
-    logic ex_res0;
+    logic ex_res0; // iverilog workaround
     assign ex_res0 = ex_res[0];
     always_comb begin
         jmp = 1'b0;
         jmp_addr = ex_addr + ex_imm;
         if (!ex_noop) begin
             case (ex_opcode)
-                7'b1100011: begin
-                    jmp = ex_res0;
-                end
-                7'b1101111: begin
-                    jmp = 1'b1;
-                end
+                7'b1100011: jmp = ex_res0;
+                7'b1101111: jmp = 1'b1;
                 7'b1100111: begin
                     jmp = 1'b1;
                     jmp_addr = ex_rs1_data + ex_imm;
@@ -190,27 +232,10 @@ module riscv_core (
         end
     end
 
-    // Flush instructions already on the pipeline on jump
-    // by simply flagging the next 3 instructions as noop.
-    logic [1:0] flush_cnt;
-    always_ff @( posedge clk ) begin
-        if (rst_n) begin
-            if (jmp) begin
-                flush_cnt <= 2'h3;
-            end else if (flush_cnt > 0) begin
-                flush_cnt <= flush_cnt - 1;
-            end
-        end else begin
-            flush_cnt <= 2'h0;
-        end
-    end
-
-    assign ex_noop = _ex_noop || flush_cnt > 0;
-
 
 
     /*
-        Stage 4: Memory Access (MEM)
+        Stage 5: Memory Access (MEM)
     */
     logic [31:0] mem_addr;
     logic [31:0] mem_instr;
@@ -260,7 +285,7 @@ module riscv_core (
 
 
     /*
-        Stage 5: Register write-back (WB) 
+        Stage 6: Register write-back (WB) 
     */
     register_writeback reg_wb (
         .clk(clk),
