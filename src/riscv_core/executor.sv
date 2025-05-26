@@ -31,35 +31,27 @@ module executor (
                 case (in_funct3)
                     3'h0: if (in_funct7 == 7'h00) op = ADD;
                         else if (in_funct7 == 7'h20) op = SUB;
-                        else if (in_funct7 == 7'h01) op = MUL;
-                    3'h1: if (in_funct7 == 7'h00) op = SLL;
-                        else if (in_funct7 == 7'h01) op = MULH;
-                    3'h2: if (in_funct7 == 7'h00) op = LT;
-                        else if (in_funct7 == 7'h01) op = MULHSU;
-                    3'h3: if (in_funct7 == 7'h00) op = LTU;
-                        else if (in_funct7 == 7'h01) op = MULHU;
                     3'h4: if (in_funct7 == 7'h00) op = XOR;
-                        else if (in_funct7 == 7'h01) op = DIV;
+                    3'h6: if (in_funct7 == 7'h00) op = OR;
+                    3'h7: if (in_funct7 == 7'h00) op = AND;
+                    3'h1: if (in_funct7 == 7'h00) op = SLL;
                     3'h5: if (in_funct7 == 7'h00) op = SRL;
                         else if (in_funct7 == 7'h20) op = SRA;
-                        else if (in_funct7 == 7'h01) op = DIVU;
-                    3'h6: if (in_funct7 == 7'h00) op = OR;
-                        else if (in_funct7 == 7'h01) op = REM;
-                    3'h7: if (in_funct7 == 7'h00) op = AND;
-                        else if (in_funct7 == 7'h01) op = REMU;
+                    3'h2: if (in_funct7 == 7'h00) op = LT;
+                    3'h3: if (in_funct7 == 7'h00) op = LTU;
                 endcase
             end 
             7'b0010011: begin // Immediate operations
                 case (in_funct3)
                     3'h0: op = ADD;
-                    3'h1: if (in_imm_high == 7'h00) op = SLL;
-                    3'h2: op = LT;
-                    3'h3: op = LTU;
                     3'h4: op = XOR;
-                    3'h5: if (in_imm_high == 7'h00) op = SRL;
-                        else if (in_imm_high == 7'h20) op = SRA;
                     3'h6: op = OR;
                     3'h7: op = AND;
+                    3'h1: if (in_imm_high == 7'h00) op = SLL;
+                    3'h5: if (in_imm_high == 7'h00) op = SRL;
+                        else if (in_imm_high == 7'h20) op = SRA;
+                    3'h2: op = LT;
+                    3'h3: op = LTU;
                 endcase
 
                 src2 = in_imm;
@@ -67,8 +59,7 @@ module executor (
                     src2[31:5] = {27{1'b0}};
                 end
             end
-            7'b0000011,
-            7'b0100011: begin // Loads and Stores
+            7'b0000011, 7'b0100011: begin // Loads and Stores
                 op = ADD;
                 src2 = in_imm;
             end
@@ -82,14 +73,12 @@ module executor (
                     3'h7: op = GEU;
                 endcase
             end
-            7'b1101111,
-            7'b1100111: begin // Jump and link
+            7'b1101111, 7'b1100111: begin // Jump and link
                 op = ADD;
                 src1 = in_addr;
                 src2 = 32'h4;
             end
-            7'b0110111,
-            7'b0010111: begin // Load upper immediate
+            7'b0110111, 7'b0010111: begin // Load upper immediate
                 op = ADD;
                 src1 = in_addr;
                 src2 = in_imm;

@@ -139,7 +139,7 @@ Because the computation result is now known one stage later (and one further awa
 
 To see the effects on area and frequency, I extended the design to support the RV32M instructions set including multiplication, division and remainder operations. I did so in the simplest possible way, by letting the synthesizer decide on a single-cycle implementation, basically treating these complex operations just like any other simpler one. Unsurprisingly, the results were nothing short of catastrophic: The core used 33177 logic cells (11.6x) at which point it was of course too large to be routed for an iCE40 FPGA, but it can be suspected that it would wreak havoc on the clock frequency as well.
 
-I undid this change again because it is not sensible by any stretch of the imagination, the respective Git commit is TODO.
+I undid this change again because it is not sensible by any stretch of the imagination, the respective Git commit is `79ce4e14f345b24087ae79808849028ffdc15232`.
 
 ### Future Work
 
