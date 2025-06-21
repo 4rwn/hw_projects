@@ -125,7 +125,7 @@ Adding register forwarding from the ID, EX, and MEM stages to the ID stage resul
 
 ### Register Reading Stage
 
-I deepend the pipeline with another stage for register reading (RR) between ID and EX. The effects are somewhat peculiar: While Fmax is only minimally improved to 51.03 MHz (+0.8%), the design now uses just 2658 logic cells (-46.5%). I rewrote the flushing logic on branches and jumps and some other things at the same time though, so that might be playing into this.
+I deepened the pipeline with another stage for register reading (RR) between ID and EX. The effects are somewhat peculiar: While Fmax is only minimally improved to 51.03 MHz (+0.8%), the design now uses just 2658 logic cells (-46.5%). I rewrote the flushing logic on branches and jumps and some other things at the same time though, so that might be playing into this.
 
 Of course, adding this new stage has the downside that one more instruction has to be flushed on a branch or jump.
 
@@ -145,3 +145,5 @@ I undid this change again because it is not sensible by any stretch of the imagi
 
 * Branch prediction: There are ways to limit the amount of work that is lost as a result of instructions having to be flushed in branching. By only diverting control flow after EX we incur the maximal penalty on each jump and branch instruction. Different kinds of instructions can be optimized differently in this regard: A JAL can be pre-decoded during IF and the jump executed for the next fetch, avoiding completely having to flush anything. A JALR cannot be dealt with in the same way because the jump address depends on a source register, but these jump instructions are mainly used for function calls and returns and thus are not as performance critical anyway. On the other hand, branches are very important for performance and a branch predictor can offer many benefits. It works in the IF stage and tries to anticipate whether a branch will be taken solely based on its address.
 * Extend supported instruction set to multiplications/divisions or floating-point operations.
+* Move branch comparisons from ALU to EX and do address calculation with ALU. Maybe even move address calculation to EX such that control flow can be adjusted a stage earlier.
+* To do work during stalling, instruction reordering is often done. A simple version in this case could just switch the stalling instruction in RR with the next in ID iff the two are independent. However, with reordering this shallow, its benefits can probably be achieved by a compiler just as well, but it will probably bring some performance for my handwritten assembly.

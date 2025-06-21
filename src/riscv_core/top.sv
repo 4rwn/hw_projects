@@ -185,8 +185,6 @@ module riscv_core (
     logic [6:0] ex_funct7;
     logic [4:0] ex_rs1, ex_rs2, ex_rd;
     logic signed [31:0] ex_imm, ex_rs1_data, ex_rs2_data;
-    op_t ex_op;
-    logic signed [31:0] ex_src1, ex_src2;
     always_ff @( posedge clk ) begin
         ex_addr <= rr_addr;
         ex_instr <= rr_instr;
@@ -202,7 +200,8 @@ module riscv_core (
         ex_rs2_data <= rr_rs2_data;
     end
 
-    logic signed [31:0] ex_res;
+    op_t ex_op;
+    logic signed [31:0] ex_src1, ex_src2;
     executor executor (
         .clk(clk),
 

@@ -44,7 +44,7 @@ module riscv_core_tb;
         .wr_data(data_wr_data)
     );
 
-    riscv_core dut ( 
+    riscv_core dut (
         .clk(clk),
         .rst_n(rst_n),
 
@@ -58,16 +58,32 @@ module riscv_core_tb;
         .data_wr_data(data_wr_data)
     );
 
+    string program_file, data_file;
+    integer fd;
     initial begin
+        if (!$value$plusargs("PROGRAM_FILE=%s", program_file)) begin
+            $fatal(1, "Missing +PROGRAM_FILE=<program_file>");
+        end
+        $readmemh(program_file, instr_mem.mem);
+
+        if ($value$plusargs("DATA_FILE=%s", data_file)) begin
+            $readmemh(data_file, data_mem.mem);
+        end
+
         $dumpfile("sim/waveform.vcd");
         $dumpvars(0, riscv_core_tb);
         
-        $readmemh("sim/test.hex", instr_mem.mem);
-
         rst_n = 0;
         #50 rst_n = 1;
 
-        #10000;
+        #100000;
+        // #1000 if (dut.regs.regs[1] != 32'h1) $fatal(1, "Test failed.");
+
+        fd = $fopen("sim/memory_dump.txt", "w");
+        for (int i = 0; i < DATA_MEM_SIZE; i++) begin
+            $fwrite(fd, "%02x\n", data_mem.mem[i]);
+        end
+        $fclose(fd);
         $finish;
     end
 endmodule
