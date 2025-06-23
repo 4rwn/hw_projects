@@ -3,6 +3,7 @@ TST = $(abspath tst)
 SIM = $(abspath sim)
 
 PROGRAM_FILE ?= $(TST)/test.s
+TESTSUITE_FILES := $(shell cd tst && find test_programs -name ts_*.s)
 
 all : fifo uart normalizer
 
@@ -38,6 +39,12 @@ core:
 	iverilog -g2012 -I$(SRC)/riscv_core/include -o $(SIM)/out $(SRC)/riscv_core/* $(TST)/riscv_core_tb.sv
 	vvp sim/out +PROGRAM_FILE=$(SIM)/test.hex $(if $(DATA_FILE),+DATA_FILE=$(DATA_FILE))
 	@echo "Done."
+
+core_ts:
+	@for file in $(TESTSUITE_FILES); do \
+		echo "Running $$file"; \
+		make core PROGRAM_FILE=$(TST)/$$file 2>&1 | grep -i "error" || true; \
+	done
 
 view:
 	gtkwave $(SIM)/waveform.vcd $(TST)/view.gtkw

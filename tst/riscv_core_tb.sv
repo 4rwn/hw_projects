@@ -76,14 +76,17 @@ module riscv_core_tb;
         rst_n = 0;
         #50 rst_n = 1;
 
-        #100000;
-        // #1000 if (dut.regs.regs[1] != 32'h1) $fatal(1, "Test failed.");
+        #1000;
+        if (dut.regs.regs[1] != 32'h00000001 ||
+            dut.regs.regs[2] != 32'h00000000 ||
+            dut.regs.regs[3] != 32'h000003e8 ||
+            dut.regs.regs[4] != 32'hfffffc18) $error("Test failed.");
 
-        fd = $fopen("sim/memory_dump.txt", "w");
-        for (int i = 0; i < DATA_MEM_SIZE; i++) begin
-            $fwrite(fd, "%02x\n", data_mem.mem[i]);
-        end
-        $fclose(fd);
+        // fd = $fopen("sim/memory_dump.txt", "w");
+        // for (int i = 0; i < DATA_MEM_SIZE; i++) begin
+        //     $fwrite(fd, "%02x\n", data_mem.mem[i]);
+        // end
+        // $fclose(fd);
         $finish;
     end
 endmodule
