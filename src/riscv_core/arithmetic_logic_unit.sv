@@ -16,9 +16,9 @@ module arithmetic_logic_unit (
             XOR: out_res <= in_src1 ^ in_src2;
             OR: out_res <= in_src1 | in_src2;
             AND: out_res <= in_src1 & in_src2;
-            SLL: out_res <= in_src1 << in_src2;
-            SRL: out_res <= in_src1 >> in_src2;
-            SRA: out_res <= in_src1 >>> in_src2;
+            SLL: out_res <= in_src1 << in_src2[4:0];
+            SRL: out_res <= in_src1 >> in_src2[4:0];
+            SRA: out_res <= in_src1 >>> in_src2[4:0];
             LT: out_res <= in_src1 < in_src2 ? 32'h1 : 32'h0;
             LTU: out_res <= $unsigned(in_src1) < $unsigned(in_src2) ? 32'h1 : 32'h0;
             EQ: out_res <= in_src1 == in_src2 ? 32'h1 : 32'h0;
