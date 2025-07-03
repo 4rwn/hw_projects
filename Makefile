@@ -3,7 +3,6 @@ TST = $(abspath tst)
 SIM = $(abspath sim)
 
 PROGRAM_FILE ?= $(TST)/test.s
-TESTSUITE_FILES := $(shell cd tst && find test_programs -name ts_*.s)
 
 all : fifo uart normalizer
 
@@ -33,17 +32,33 @@ sorter:
 
 core:
 	@echo "Running RISC-V core test bench."
-	riscv32-unknown-elf-as -o $(SIM)/test.o $(PROGRAM_FILE)
-	riscv32-unknown-elf-objcopy -O binary $(SIM)/test.o $(SIM)/test.bin
-	hexdump -v -e '1/1 "%02x\n"' $(SIM)/test.bin > $(SIM)/test.hex
+	riscv32-unknown-elf-as -o $(SIM)/tmp.o $(PROGRAM_FILE)
+	riscv32-unknown-elf-objcopy -O binary $(SIM)/tmp.o $(SIM)/tmp.bin
+	hexdump -v -e '1/1 "%02x\n"' $(SIM)/tmp.bin > $(SIM)/tmp.hex
 	iverilog -g2012 -I$(SRC)/riscv_core/include -o $(SIM)/out $(SRC)/riscv_core/* $(TST)/riscv_core_tb.sv
-	vvp sim/out +PROGRAM_FILE=$(SIM)/test.hex $(if $(DATA_FILE),+DATA_FILE=$(DATA_FILE))
+	vvp sim/out +PROGRAM_FILE=$(SIM)/tmp.hex $(if $(DATA_FILE),+DATA_FILE=$(DATA_FILE)) $(if $(EXPECTED),+EXPECTED=$(EXPECTED))
 	@echo "Done."
 
 core_ts:
-	@for file in $(TESTSUITE_FILES); do \
-		echo "Running $$file"; \
-		make core PROGRAM_FILE=$(TST)/$$file 2>&1 | grep -i "error" || true; \
+	@for program in $(shell cd $(TST)/riscv_programs && ls); do \
+		echo "Running $$program"; \
+		for test in $$(cd $(TST)/riscv_programs/$$program && ls -d t*); do \
+			output=$$( \
+				if [ -f $(TST)/riscv_programs/$$program/$$test/data.hex ]; then \
+					make core PROGRAM_FILE=$(TST)/riscv_programs/$$program/code.s DATA_FILE=$(TST)/riscv_programs/$$program/$$test/data.hex EXPECTED=$(TST)/riscv_programs/$$program/$$test/expected.hex 2>&1; \
+				else \
+					make core PROGRAM_FILE=$(TST)/riscv_programs/$$program/code.s EXPECTED=$(TST)/riscv_programs/$$program/$$test/expected.hex 2>&1; \
+				fi \
+			); \
+			errors=$$(echo "$$output" | grep -i "error"); \
+			if [ -n "$$errors" ]; then \
+				echo "\033[0;31m[$$test] FAILED\033[0m"; \
+				echo "$$errors"; \
+			else \
+				echo "\033[0;32m[$$test] OK\033[0m"; \
+			fi; \
+		done; \
+		echo; \
 	done
 
 view:

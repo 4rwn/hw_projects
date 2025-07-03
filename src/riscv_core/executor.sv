@@ -83,6 +83,11 @@ module executor (
                 src1 = in_addr;
                 src2 = in_imm;
             end
+            7'b1110011: begin // Control transfer
+                op = ADD;
+                src1 = 32'b0;
+                src2 = 32'b0;
+            end
         endcase
     end
 

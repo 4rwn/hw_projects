@@ -14,7 +14,9 @@ module riscv_core (
 
     output logic [1:0] data_wr,
     output logic [31:0] data_wr_addr,
-    output logic [31:0] data_wr_data
+    output logic [31:0] data_wr_data,
+
+    output logic halt
 );
     // Control flow
     logic [31:0] pc;
@@ -339,6 +341,34 @@ module riscv_core (
     /*
         Stage 7: Register write-back (WB) 
     */
+    logic [31:0] wb_addr;
+    logic [31:0] wb_instr;
+    logic wb_noop;
+    logic [6:0] wb_opcode;
+    instr_format_t wb_instr_format;
+    logic [2:0] wb_funct3;
+    logic [6:0] wb_funct7;
+    logic [4:0] wb_rs1, wb_rs2, wb_rd;
+    logic signed [31:0] wb_imm, wb_rs1_data, wb_rs2_data, wb_res;
+    logic signed [31:0] wb_mem_rd;
+    always_ff @( posedge clk ) begin
+        wb_addr <= mem_addr;
+        wb_instr <= mem_instr;
+        wb_noop <= mem_noop;
+        wb_opcode <= mem_opcode;
+        wb_instr_format <= mem_instr_format;
+        wb_funct3 <= mem_funct3;
+        wb_funct7 <= mem_funct7;
+        wb_rs1 <= mem_rs1;
+        wb_rs2 <= mem_rs2;
+        wb_rd <= mem_rd;
+        wb_imm <= mem_imm;
+        wb_rs1_data <= mem_rs1_data;
+        wb_rs2_data <= mem_rs2_data;
+        wb_res <= mem_res;
+        wb_mem_rd <= mem_mem_rd;
+    end
+
     register_writeback reg_wb (
         .clk(clk),
 
@@ -353,4 +383,14 @@ module riscv_core (
         .reg_wr(reg_wr),
         .reg_wr_data(reg_wr_data)
     );
+
+    always_ff @( posedge clk ) begin
+        if (rst_n) begin
+            if (!wb_noop && wb_opcode == 7'b1110011 && wb_funct3 == 3'b0 && (wb_imm == 32'b0 || wb_imm == 32'b1)) begin
+                halt <= 1'b1;
+            end
+        end else begin
+            halt <= 1'b0;
+        end
+    end
 endmodule
