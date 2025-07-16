@@ -4,8 +4,6 @@ SIM = $(abspath sim)
 
 PROGRAM_FILE ?= $(TST)/test.s
 
-all : fifo uart normalizer
-
 fifo:
 	@echo "Running FIFO test bench."
 	iverilog -g2012 -o $(SIM)/out $(SRC)/fifo.sv $(TST)/fifo_tb.sv
@@ -33,7 +31,8 @@ sorter:
 core:
 	@echo "Running RISC-V core test bench."
 	riscv32-unknown-elf-as -o $(SIM)/tmp.o $(PROGRAM_FILE)
-	riscv32-unknown-elf-objcopy -O binary $(SIM)/tmp.o $(SIM)/tmp.bin
+	riscv32-unknown-elf-ld -Ttext=0x0 --no-relax -o $(SIM)/tmp.elf $(SIM)/tmp.o
+	riscv32-unknown-elf-objcopy -O binary $(SIM)/tmp.elf $(SIM)/tmp.bin
 	hexdump -v -e '1/1 "%02x\n"' $(SIM)/tmp.bin > $(SIM)/tmp.hex
 	iverilog -g2012 -I$(SRC)/riscv_core/include -o $(SIM)/out $(SRC)/riscv_core/* $(TST)/riscv_core_tb.sv
 	vvp sim/out +PROGRAM_FILE=$(SIM)/tmp.hex $(if $(DATA_FILE),+DATA_FILE=$(DATA_FILE)) $(if $(EXPECTED),+EXPECTED=$(EXPECTED))
