@@ -1,8 +1,8 @@
 `timescale 1ns / 1ps
 
 module riscv_core_tb;
-    localparam INSTR_MEM_SIZE = 256;
-    localparam DATA_MEM_SIZE = 1024;
+    localparam INSTR_MEM_SIZE = 1024;
+    localparam DATA_MEM_SIZE = 4096;
 
     logic clk = 0;
     always #10 clk = ~clk;

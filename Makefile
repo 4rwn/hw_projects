@@ -30,9 +30,14 @@ sorter:
 
 core:
 	@echo "Running RISC-V core test bench."
-	riscv32-unknown-elf-as -o $(SIM)/tmp.o $(PROGRAM_FILE)
-	riscv32-unknown-elf-ld -Ttext=0x0 --no-relax -o $(SIM)/tmp.elf $(SIM)/tmp.o
-	riscv32-unknown-elf-objcopy -O binary $(SIM)/tmp.elf $(SIM)/tmp.bin
+	@if echo "$(PROGRAM_FILE)" | grep -qE '\.c$$'; then \
+		riscv32-unknown-elf-gcc -march=rv32i -mabi=ilp32 -O3 -S $(PROGRAM_FILE) -o $(SIM)/tmp.s; \
+	else \
+		cp $(PROGRAM_FILE) $(SIM)/tmp.s; \
+	fi
+	riscv32-unknown-elf-as -march=rv32i -mabi=ilp32 -o $(SIM)/tmp.o $(SIM)/tmp.s
+	riscv32-unknown-elf-ld -T $(TST)/link.ld -o $(SIM)/tmp.elf $(SIM)/tmp.o
+	riscv32-unknown-elf-objcopy -O binary -j .text $(SIM)/tmp.elf $(SIM)/tmp.bin
 	hexdump -v -e '1/1 "%02x\n"' $(SIM)/tmp.bin > $(SIM)/tmp.hex
 	iverilog -g2012 -I$(SRC)/riscv_core/include -o $(SIM)/out $(SRC)/riscv_core/* $(TST)/riscv_core_tb.sv
 	vvp sim/out +PROGRAM_FILE=$(SIM)/tmp.hex $(if $(DATA_FILE),+DATA_FILE=$(DATA_FILE)) $(if $(EXPECTED),+EXPECTED=$(EXPECTED))
@@ -41,14 +46,13 @@ core:
 core_ts:
 	@for program in $(shell cd $(TST)/riscv_programs && ls); do \
 		echo "Running $$program"; \
+		program_file=$$(ls $(TST)/riscv_programs/$$program/main.*); \
 		for test in $$(cd $(TST)/riscv_programs/$$program && ls -d t*); do \
-			output=$$( \
-				if [ -f $(TST)/riscv_programs/$$program/$$test/data.hex ]; then \
-					make core PROGRAM_FILE=$(TST)/riscv_programs/$$program/code.s DATA_FILE=$(TST)/riscv_programs/$$program/$$test/data.hex EXPECTED=$(TST)/riscv_programs/$$program/$$test/expected.hex 2>&1; \
-				else \
-					make core PROGRAM_FILE=$(TST)/riscv_programs/$$program/code.s EXPECTED=$(TST)/riscv_programs/$$program/$$test/expected.hex 2>&1; \
-				fi \
-			); \
+			if [ -f $(TST)/riscv_programs/$$program/$$test/data.hex ]; then \
+				output=$$(make core PROGRAM_FILE="$$program_file" DATA_FILE=$(TST)/riscv_programs/$$program/$$test/data.hex EXPECTED=$(TST)/riscv_programs/$$program/$$test/expected.hex 2>&1); \
+			else \
+				output=$$(make core PROGRAM_FILE="$$program_file" EXPECTED=$(TST)/riscv_programs/$$program/$$test/expected.hex 2>&1); \
+			fi; \
 			errors=$$(echo "$$output" | grep -i "error"); \
 			if [ -n "$$errors" ]; then \
 				echo "\033[0;31m[$$test] FAILED\033[0m"; \
