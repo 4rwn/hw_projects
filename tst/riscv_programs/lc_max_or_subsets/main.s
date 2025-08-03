@@ -36,3 +36,6 @@ inner_done:
     j outer_loop
 outer_done:
     ecall
+    nop
+    nop
+    nop

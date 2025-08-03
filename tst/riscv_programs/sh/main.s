@@ -29,3 +29,6 @@ _start:
     sh x0,      5(x0)    # MEM[5]=0x00, MEM[6]=0x00
 
     ecall
+    nop
+    nop
+    nop

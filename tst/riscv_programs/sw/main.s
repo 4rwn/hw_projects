@@ -29,3 +29,6 @@ _start:
     sw x0,     500(x0)    # MEM[500..503]  = 00 00 00 00
 
     ecall
+    nop
+    nop
+    nop

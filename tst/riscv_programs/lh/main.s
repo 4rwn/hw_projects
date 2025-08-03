@@ -43,3 +43,6 @@ _start:
 
     # End
     ecall
+    nop
+    nop
+    nop

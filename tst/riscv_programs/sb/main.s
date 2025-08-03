@@ -29,3 +29,6 @@ _start:
     sb x0,     5(x0)     # MEM[5] = 0x00
 
     ecall
+    nop
+    nop
+    nop

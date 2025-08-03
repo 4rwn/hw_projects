@@ -3,9 +3,12 @@ void _start(void) {
     asm volatile (
         "lui   sp, %hi(_estack)\n"
         "addi  sp, sp, %lo(_estack)\n"
-        "call main      \n"
-        "mv x1, a0      \n"
-        "ecall          \n"
+        "call main\n"
+        "mv x1, a0\n"
+        "ecall\n"
+        "nop\n"
+        "nop\n"
+        "nop\n"
     );
 }
 

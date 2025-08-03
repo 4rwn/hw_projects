@@ -32,3 +32,6 @@ not_found:
 
 done:
     ecall
+    nop
+    nop
+    nop

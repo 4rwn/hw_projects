@@ -37,3 +37,6 @@ after3:
     li   x11, 0xEEEEEEEE    # executed → x11 = 0xEEEEEEEE
 
     ecall
+    nop
+    nop
+    nop

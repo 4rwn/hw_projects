@@ -7,11 +7,11 @@ module memory #(
     output logic [31:0] rd_data,
 
     // Writes of different byte lengths are supported:
-    // wr == 2'h0: No write
-    // wr == 2'h1: Write 1 byte
-    // wr == 2'h2: Write 2 bytes
-    // wr == 2'h3: Write 4 bytes
-    input logic [1:0] wr,
+    // wr_en == 2'h0: No write
+    // wr_en == 2'h1: Write 1 byte
+    // wr_en == 2'h2: Write 2 bytes
+    // wr_en == 2'h3: Write 4 bytes
+    input logic [1:0] wr_en,
     input logic [31:0] wr_addr,
     input logic [31:0] wr_data
 );
@@ -31,12 +31,12 @@ module memory #(
         rd_data[31:24] <= mem[_rd_addr + 3];
 
         // Write (0, 1, 2, or 4 bytes)
-        if (wr == 2'h1) begin
+        if (wr_en == 2'h1) begin
             mem[_wr_addr] <= wr_data[7:0];
-        end else if (wr == 2'h2) begin
+        end else if (wr_en == 2'h2) begin
             mem[_wr_addr] <= wr_data[7:0];
             mem[_wr_addr + 1] <= wr_data[15:8];
-        end else if (wr == 2'h3) begin
+        end else if (wr_en == 2'h3) begin
             mem[_wr_addr] <= wr_data[7:0];
             mem[_wr_addr + 1] <= wr_data[15:8];
             mem[_wr_addr + 2] <= wr_data[23:16];

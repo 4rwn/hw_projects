@@ -48,3 +48,6 @@ max2:
 
 done:
     ecall
+    nop
+    nop
+    nop

@@ -20,7 +20,7 @@ module riscv_core_tb;
         .rd_addr(instr_rd_addr),
         .rd_data(instr_rd_data),
 
-        .wr(2'b00),
+        .wr_en(2'b00),
         .wr_addr(0),
         .wr_data(0)
     );
@@ -39,13 +39,15 @@ module riscv_core_tb;
         .rd_addr(data_rd_addr),
         .rd_data(data_rd_data),
 
-        .wr(data_wr),
+        .wr_en(data_wr),
         .wr_addr(data_wr_addr),
         .wr_data(data_wr_data)
     );
 
-    logic halt;
-    riscv_core dut (
+    logic [2:0] halt;
+    riscv_core #(
+        .DATA_MEM_SIZE(DATA_MEM_SIZE)
+    ) dut (
         .clk(clk),
         .rst_n(rst_n),
 
@@ -54,6 +56,7 @@ module riscv_core_tb;
 
         .data_rd_addr(data_rd_addr),
         .data_rd_data(data_rd_data),
+
         .data_wr(data_wr),
         .data_wr_addr(data_wr_addr),
         .data_wr_data(data_wr_data),
@@ -85,8 +88,10 @@ module riscv_core_tb;
 
         // Control transfer signals termination
         passed = 0;
-        while (!halt && passed++ < 1000000) #1;
+        while (halt == 3'b0 && passed++ < 1000000) #1;
         if (passed >= 1000000) $error("Execution timed out.");
+
+        if (halt != 3'b100) $error("Unexpected halting signal %b.", halt);
 
         // Compare register and data memory state to expected, if given
         if ($value$plusargs("EXPECTED=%s", expected_file)) begin
@@ -101,9 +106,9 @@ module riscv_core_tb;
                 expected_reg[23:16] = expected_data[i*4+2];
                 expected_reg[31:24] = expected_data[i*4+3];
 
-                if (^expected_reg !== 1'bx && dut.regs.regs[i] !== expected_reg) begin
+                if (^expected_reg !== 1'bx && dut.registers.regs[i] !== expected_reg) begin
                     $error("Register[%0d] mismatch: expected 0x%08h, got 0x%08h",
-                        i, expected_reg, dut.regs.regs[i]);
+                        i, expected_reg, dut.registers.regs[i]);
                 end
             end
 

@@ -33,3 +33,6 @@ _start:
 
     # End program
     ecall
+    nop
+    nop
+    nop
