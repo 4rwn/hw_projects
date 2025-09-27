@@ -28,8 +28,7 @@ sorter:
 	vvp sim/out
 	@echo "Done."
 
-core:
-	@echo "Running RISC-V core test bench."
+compile:
 	@if echo "$(PROGRAM_FILE)" | grep -qE '\.c$$'; then \
 		riscv32-unknown-elf-gcc -march=rv32i -mabi=ilp32 -O3 -S $(PROGRAM_FILE) -o $(SIM)/tmp.s; \
 	else \
@@ -39,6 +38,9 @@ core:
 	riscv32-unknown-elf-ld -T $(TST)/link.ld -o $(SIM)/tmp.elf $(SIM)/tmp.o
 	riscv32-unknown-elf-objcopy -O binary -j .text $(SIM)/tmp.elf $(SIM)/tmp.bin
 	hexdump -v -e '1/1 "%02x\n"' $(SIM)/tmp.bin > $(SIM)/tmp.hex
+
+core: $(if $(strip $(PROGRAM_FILE)), compile)
+	@echo "Running RISCV core."
 	iverilog -g2012 -I$(SRC)/riscv_core/include -o $(SIM)/out $(SRC)/riscv_core/* $(TST)/riscv_core_tb.sv
 	vvp sim/out +PROGRAM_FILE=$(SIM)/tmp.hex $(if $(DATA_FILE),+DATA_FILE=$(DATA_FILE)) $(if $(EXPECTED),+EXPECTED=$(EXPECTED))
 	@echo "Done."
@@ -63,6 +65,11 @@ core_ts:
 		done; \
 		echo; \
 	done
+
+core_vhdl: $(if $(strip $(PROGRAM_FILE)), compile)
+	@echo "Running RISCV core (VHDL)."
+	ghdl -a --std=08 $(SRC)/riscv_core_vhdl/*.vhd
+	ghdl -r --std=08 riscv_core_tb --stop-time=1us --vcd=waveform.vcd
 
 view:
 	gtkwave $(SIM)/waveform.vcd $(TST)/view.gtkw

@@ -159,68 +159,72 @@ module instruction_decoder (
     // Register forwarding for source register 1.
     logic stall_rs1;
     logic [31:0] rs1_data;
-    always_comb begin
-        stall_rs1 = 1'b0;
-        rs1_data = reg_rd1_data;
-        if (in_valid && rs1 != 5'b0) begin
-            if (id_valid && rs1 == id_dest) begin
-                if (id_instr_type == LUI) begin
-                    rs1_data = id_imm;
-                end else begin
-                    stall_rs1 = 1'b1;
-                end
-            end else if (ex_valid && rs1 == ex_dest) begin
-                if (ex_instr_type == LUI) begin
-                    rs1_data = ex_imm;
-                end else if (ex_instr_type != LOAD) begin
-                    rs1_data = ex_res;
-                end else begin
-                    stall_rs1 = 1'b1;
-                end
-            end else if (mem_valid && rs1 == mem_dest) begin
-                if (mem_instr_type == LUI) begin
-                    rs1_data = mem_imm;
-                end else if (mem_instr_type != LOAD) begin
-                    rs1_data = mem_res;
-                end else begin
-                    rs1_data = mem_mem_rd;
-                end
-            end
-        end
-    end
+    // always_comb begin
+    //     stall_rs1 = 1'b0;
+    //     rs1_data = reg_rd1_data;
+    //     if (in_valid && rs1 != 5'b0) begin
+    //         if (id_valid && rs1 == id_dest) begin
+    //             if (id_instr_type == LUI) begin
+    //                 rs1_data = id_imm;
+    //             end else begin
+    //                 stall_rs1 = 1'b1;
+    //             end
+    //         end else if (ex_valid && rs1 == ex_dest) begin
+    //             if (ex_instr_type == LUI) begin
+    //                 rs1_data = ex_imm;
+    //             end else if (ex_instr_type != LOAD) begin
+    //                 rs1_data = ex_res;
+    //             end else begin
+    //                 stall_rs1 = 1'b1;
+    //             end
+    //         end else if (mem_valid && rs1 == mem_dest) begin
+    //             if (mem_instr_type == LUI) begin
+    //                 rs1_data = mem_imm;
+    //             end else if (mem_instr_type != LOAD) begin
+    //                 rs1_data = mem_res;
+    //             end else begin
+    //                 rs1_data = mem_mem_rd;
+    //             end
+    //         end
+    //     end
+    // end
+    assign stall_rs1 = rs1 != 5'b0 && ((id_valid && rs1 == id_dest) || (ex_valid && rs1 == ex_dest) || (mem_valid && rs1 == mem_dest));
+    assign rs1_data = reg_rd1_data;
 
     // Register forwarding for source register 2.
     logic stall_rs2;
     logic [31:0] rs2_data;
-    always_comb begin
-        stall_rs2 = 1'b0;
-        rs2_data = reg_rd2_data;
-        if (in_valid && rs2 != 5'b0) begin
-            if (id_valid && rs2 == id_dest) begin
-                if (id_instr_type == LUI) begin
-                    rs2_data = id_imm;
-                end else begin
-                    stall_rs2 = 1'b1;
-                end
-            end else if (ex_valid && rs2 == ex_dest) begin
-                if (ex_instr_type == LUI) begin
-                    rs2_data = ex_imm;
-                end else if (ex_instr_type != LOAD) begin
-                    rs2_data = ex_res;
-                end else begin
-                    stall_rs2 = 1'b1;
-                end
-            end else if (mem_valid && rs2 == mem_dest) begin
-                if (mem_instr_type == LUI) begin
-                    rs2_data = mem_imm;
-                end else if (mem_instr_type != LOAD) begin
-                    rs2_data = mem_res;
-                end else begin
-                    rs2_data = mem_mem_rd;
-                end
-            end
-        end
-    end
+    // always_comb begin
+    //     stall_rs2 = 1'b0;
+    //     rs2_data = reg_rd2_data;
+    //     if (in_valid && rs2 != 5'b0) begin
+    //         if (id_valid && rs2 == id_dest) begin
+    //             if (id_instr_type == LUI) begin
+    //                 rs2_data = id_imm;
+    //             end else begin
+    //                 stall_rs2 = 1'b1;
+    //             end
+    //         end else if (ex_valid && rs2 == ex_dest) begin
+    //             if (ex_instr_type == LUI) begin
+    //                 rs2_data = ex_imm;
+    //             end else if (ex_instr_type != LOAD) begin
+    //                 rs2_data = ex_res;
+    //             end else begin
+    //                 stall_rs2 = 1'b1;
+    //             end
+    //         end else if (mem_valid && rs2 == mem_dest) begin
+    //             if (mem_instr_type == LUI) begin
+    //                 rs2_data = mem_imm;
+    //             end else if (mem_instr_type != LOAD) begin
+    //                 rs2_data = mem_res;
+    //             end else begin
+    //                 rs2_data = mem_mem_rd;
+    //             end
+    //         end
+    //     end
+    // end
+    assign stall_rs2 = rs2 != 5'b0 && ((id_valid && rs2 == id_dest) || (ex_valid && rs2 == ex_dest) || (mem_valid && rs2 == mem_dest));
+    assign rs2_data = reg_rd2_data;
 
     assign stall = stall_rs1 || stall_rs2;
 
@@ -324,7 +328,7 @@ module instruction_decoder (
     always_ff @( posedge clk ) begin
         if (rst_n) begin
             out_addr        <= in_addr;
-            out_valid       <= in_valid && !stall;
+            out_valid       <= in_valid && !stall && !jmp;
             out_instr_type  <= instr_type;
             out_op          <= op;
             out_src1        <= src1;

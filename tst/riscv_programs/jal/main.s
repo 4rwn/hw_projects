@@ -26,7 +26,7 @@ forward3:
     jal  x0, after3         # forward jump to after3
 skip3:
     li   x13, 0x13131313    # executed
-    jal  x8, forward3       # negative jump back to forward3JAL
+    jal  x8, forward3       # negative jump back to forward3
     li   x11, 0x11111111    # skipped
 after3:
     li   x10, 0xAAAAAAAA    # marker: executed after negative test
