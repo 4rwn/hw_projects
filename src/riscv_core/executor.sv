@@ -6,6 +6,7 @@ module executor (
 
     // Pipeline inputs
     input logic [31:0] in_addr,
+    input logic in_valid,
     input instr_type_t in_instr_type,
     input mem_type_t in_mem_type,
     input alu_op_t in_op,
@@ -17,6 +18,7 @@ module executor (
     input logic [31:0] in_imm,
     
     // Pipeline outputs
+    output logic out_valid,
     output instr_type_t out_instr_type,
     output mem_type_t out_mem_type,
     output logic [4:0] out_dest,
@@ -43,7 +45,8 @@ module executor (
     logic [31:0] _rs1_data;
     always_ff @( posedge clk ) begin
         if (rst_n) begin
-            out_instr_type  <= jmp ? NONE : in_instr_type;
+            out_valid       <= in_valid && !jmp;
+            out_instr_type  <= in_instr_type;
             out_mem_type    <= in_mem_type;
             out_dest        <= in_dest;
             out_rs2_data    <= in_rs2_data;
@@ -51,7 +54,6 @@ module executor (
 
             _addr <= in_addr;
             _rs1_data <= in_rs1_data;
-
         end
     end
 
@@ -60,13 +62,15 @@ module executor (
     always_comb begin
         jmp = 1'b0;
         jmp_addr = _addr + out_imm;
-        case (out_instr_type)
-            BRANCH: jmp = _res0;
-            JAL:    jmp = 1'b1;
-            JALR: begin
-                jmp = 1'b1;
-                jmp_addr = _rs1_data + out_imm;
-            end
-        endcase
+        if (out_valid) begin
+            case (out_instr_type)
+                BRANCH: jmp = _res0;
+                JAL:    jmp = 1'b1;
+                JALR: begin
+                    jmp = 1'b1;
+                    jmp_addr = _rs1_data + out_imm;
+                end
+            endcase
+        end
     end
 endmodule

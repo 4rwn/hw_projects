@@ -8,17 +8,11 @@ module instruction_decoder (
     input logic jmp,
     input logic [31:0] in_addr,
     input logic [31:0] in_instr,
-    input instr_type_t in_instr_type,
-
-    input instr_type_t id_instr_type,
-    input logic [4:0] id_dest,
-    input instr_type_t ex_instr_type,
-    input logic [4:0] ex_dest,
-    input instr_type_t mem_instr_type,
-    input logic [4:0] mem_dest,
+    input logic in_valid,
 
     // Pipeline outputs
     output logic [31:0] out_addr,
+    output logic out_valid,
     output instr_type_t out_instr_type,
     output mem_type_t out_mem_type,
     output alu_op_t out_op,
@@ -36,7 +30,24 @@ module instruction_decoder (
     output logic [4:0] reg_rd1_reg,
     output logic [4:0] reg_rd2_reg,
     input logic [31:0] reg_rd1_data,
-    input logic [31:0] reg_rd2_data
+    input logic [31:0] reg_rd2_data,
+
+    // Data hazard handling and register forwarding
+    input logic id_valid,
+    input instr_type_t id_instr_type,
+    input logic [4:0] id_dest,
+    input logic [31:0] id_imm,
+    input logic ex_valid,
+    input instr_type_t ex_instr_type,
+    input logic [4:0] ex_dest,
+    input logic [31:0] ex_imm,
+    input logic [31:0] ex_res,
+    input logic mem_valid,
+    input instr_type_t mem_instr_type,
+    input logic [4:0] mem_dest,
+    input logic [31:0] mem_imm,
+    input logic [31:0] mem_res,
+    input logic [31:0] mem_mem_rd
 );
     logic [6:0] opcode;
     instr_format_t instr_format;
@@ -50,6 +61,7 @@ module instruction_decoder (
     assign funct7 = in_instr[31:25];
     assign rd = in_instr[11:7];
 
+    // Instruction format
     always_comb begin
         case (opcode)
             7'b0110011: instr_format = R;
@@ -66,7 +78,8 @@ module instruction_decoder (
         endcase
     end
 
-    logic [4:0] _rs1;
+    // Source register 1
+    logic [4:0] _rs1; // iverilog workaround
     assign _rs1 = in_instr[19:15];
     always_comb begin
         case (instr_format)
@@ -75,7 +88,8 @@ module instruction_decoder (
         endcase
     end
 
-    logic [4:0] _rs2;
+    // Source register 2
+    logic [4:0] _rs2; // iverilog workaround
     assign _rs2 = in_instr[24:20];
     always_comb begin
         case (instr_format)
@@ -84,7 +98,8 @@ module instruction_decoder (
         endcase
     end
 
-    logic [11:0] _instr_31_20;
+    // Immediate
+    logic [11:0] _instr_31_20; // iverilog workaround
     logic  _instr_31;
     logic [4:0] _instr_11_7;
     logic [6:0] _instr_31_25;
@@ -141,8 +156,76 @@ module instruction_decoder (
     assign reg_rd1_reg = rs1;
     assign reg_rd2_reg = rs2;
 
+    // Register forwarding for source register 1.
+    logic stall_rs1;
+    logic [31:0] rs1_data;
+    always_comb begin
+        stall_rs1 = 1'b0;
+        rs1_data = reg_rd1_data;
+        if (in_valid && rs1 != 5'b0) begin
+            if (id_valid && rs1 == id_dest) begin
+                if (id_instr_type == LUI) begin
+                    rs1_data = id_imm;
+                end else begin
+                    stall_rs1 = 1'b1;
+                end
+            end else if (ex_valid && rs1 == ex_dest) begin
+                if (ex_instr_type == LUI) begin
+                    rs1_data = ex_imm;
+                end else if (ex_instr_type != LOAD) begin
+                    rs1_data = ex_res;
+                end else begin
+                    stall_rs1 = 1'b1;
+                end
+            end else if (mem_valid && rs1 == mem_dest) begin
+                if (mem_instr_type == LUI) begin
+                    rs1_data = mem_imm;
+                end else if (mem_instr_type != LOAD) begin
+                    rs1_data = mem_res;
+                end else begin
+                    rs1_data = mem_mem_rd;
+                end
+            end
+        end
+    end
+
+    // Register forwarding for source register 2.
+    logic stall_rs2;
+    logic [31:0] rs2_data;
+    always_comb begin
+        stall_rs2 = 1'b0;
+        rs2_data = reg_rd2_data;
+        if (in_valid && rs2 != 5'b0) begin
+            if (id_valid && rs2 == id_dest) begin
+                if (id_instr_type == LUI) begin
+                    rs2_data = id_imm;
+                end else begin
+                    stall_rs2 = 1'b1;
+                end
+            end else if (ex_valid && rs2 == ex_dest) begin
+                if (ex_instr_type == LUI) begin
+                    rs2_data = ex_imm;
+                end else if (ex_instr_type != LOAD) begin
+                    rs2_data = ex_res;
+                end else begin
+                    stall_rs2 = 1'b1;
+                end
+            end else if (mem_valid && rs2 == mem_dest) begin
+                if (mem_instr_type == LUI) begin
+                    rs2_data = mem_imm;
+                end else if (mem_instr_type != LOAD) begin
+                    rs2_data = mem_res;
+                end else begin
+                    rs2_data = mem_mem_rd;
+                end
+            end
+        end
+    end
+
+    assign stall = stall_rs1 || stall_rs2;
+
+    // Instruction decoding
     instr_type_t instr_type;
-    mem_type_t mem_type;
     alu_op_t op;
     logic [31:0] src1, src2;
 
@@ -151,24 +234,25 @@ module instruction_decoder (
     always_comb begin
         instr_type = MATH;
         op = NO_OP;
-        src1 = reg_rd1_data;
-        src2 = reg_rd2_data;
+        src1 = rs1_data;
+        src2 = rs2_data;
         case (opcode)
             7'b0110011: begin // Register operations
                 case (funct3)
                     3'h0: if (funct7 == 7'h00) op = ADD;
-                        else if (funct7 == 7'h20) op = SUB;
+                     else if (funct7 == 7'h20) op = SUB;
                     3'h1: if (funct7 == 7'h00) op = SLL;
                     3'h2: if (funct7 == 7'h00) op = LT;
                     3'h3: if (funct7 == 7'h00) op = LTU;
                     3'h4: if (funct7 == 7'h00) op = XOR;
                     3'h5: if (funct7 == 7'h00) op = SRL;
-                        else if (funct7 == 7'h20) op = SRA;
+                     else if (funct7 == 7'h20) op = SRA;
                     3'h6: if (funct7 == 7'h00) op = OR;
                     3'h7: if (funct7 == 7'h00) op = AND;
                 endcase
             end 
             7'b0010011: begin // Immediate operations
+                src2 = imm;
                 case (funct3)
                     3'h0: op = ADD;
                     3'h1: if (imm_high == 7'h00) op = SLL;
@@ -176,41 +260,26 @@ module instruction_decoder (
                     3'h3: op = LTU;
                     3'h4: op = XOR;
                     3'h5: if (imm_high == 7'h00) op = SRL;
-                        else if (imm_high == 7'h20) op = SRA;
+                     else if (imm_high == 7'h20) op = SRA;
                     3'h6: op = OR;
                     3'h7: op = AND;
                 endcase
-
-                src2 = imm;
-                if (op == SLL || op == SRL || op == SRA) begin
-                    src2[31:5] = {27{1'b0}};
-                end
             end
             7'b0000011: begin // Loads
                 instr_type = LOAD;
                 src2 = imm;
 
-                op = ADD;
-                case (funct3)
-                    3'h0: mem_type = BYTE;
-                    3'h1: mem_type = HALF;
-                    3'h2: mem_type = WORD;
-                    3'h4: mem_type = BYTE_UNSIGNED;
-                    3'h5: mem_type = HALF_UNSIGNED;
-                    default: op = NO_OP;
-                endcase
+                if (funct3 == 3'h0 || funct3 == 3'h1 || funct3 == 3'h2 || funct3 == 3'h4 || funct3 == 3'h5) begin 
+                    op = ADD;
+                end
             end
             7'b0100011: begin // Stores
                 instr_type = STORE;
                 src2 = imm;
 
-                op = ADD;
-                case (funct3)
-                    3'h0: mem_type = BYTE;
-                    3'h1: mem_type = HALF;
-                    3'h2: mem_type = WORD;
-                    default: op = NO_OP;
-                endcase
+                if (funct3 == 3'h0 || funct3 == 3'h1 || funct3 == 3'h2) begin 
+                    op = ADD;
+                end
             end
             7'b1100011: begin // Branches
                 instr_type = BRANCH;
@@ -251,17 +320,26 @@ module instruction_decoder (
         endcase
     end
 
+    // Pipeline outputs
     always_ff @( posedge clk ) begin
         if (rst_n) begin
             out_addr        <= in_addr;
-            out_instr_type  <= jmp || stall || in_instr_type == NONE ? NONE : instr_type;
-            out_mem_type    <= mem_type;
+            out_valid       <= in_valid && !stall;
+            out_instr_type  <= instr_type;
             out_op          <= op;
             out_src1        <= src1;
             out_src2        <= src2;
-            out_rs1_data    <= reg_rd1_data;
-            out_rs2_data    <= reg_rd2_data;
+            out_rs1_data    <= rs1_data;
+            out_rs2_data    <= rs2_data;
             out_imm         <= imm;
+
+            case (funct3)
+                3'h0: out_mem_type <= BYTE;
+                3'h1: out_mem_type <= HALF;
+                3'h2: out_mem_type <= WORD;
+                3'h4: out_mem_type <= BYTE_UNSIGNED;
+                3'h5: out_mem_type <= HALF_UNSIGNED;
+            endcase
 
             case (instr_format)
                 R, I, U, J: out_dest <= rd;
@@ -275,12 +353,4 @@ module instruction_decoder (
             halt <= 1'b0;
         end
     end
-
-    assign stall_rs1 = rs1 != 5'h0 && ((id_instr_type != NONE && rs1 == id_dest)
-        || (ex_instr_type != NONE && rs1 == ex_dest)
-        || (mem_instr_type != NONE && rs1 == mem_dest));
-    assign stall_rs2 = rs2 != 5'h0 && ((id_instr_type != NONE && rs2 == id_dest)
-        || (ex_instr_type != NONE && rs2 == ex_dest)
-        || (mem_instr_type != NONE && rs2 == mem_dest));
-    assign stall = stall_rs1 || stall_rs2;
 endmodule

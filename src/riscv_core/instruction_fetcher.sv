@@ -12,7 +12,7 @@ module instruction_fetcher (
     // Pipeline outputs
     output logic [31:0] out_addr,
     output logic [31:0] out_instr,
-    output instr_type_t out_instr_type,
+    output logic out_valid,
 
     // Instruction memory read interface
     output logic [31:0] instr_rd_addr,
@@ -24,16 +24,16 @@ module instruction_fetcher (
         if (rst_n) begin
             if (jmp) begin
                 pc <= jmp_addr;
-                out_instr_type <= NONE;
+                out_valid <= 1'b0;
             end else if (!stall) begin
                 pc <= pc + 4;
                 
                 out_addr <= pc;
-                out_instr_type <= UNKNOWN;
+                out_valid <= 1'b1;
             end
         end else begin
             pc <= 32'h0;
-            out_instr_type <= NONE;
+            out_valid <= 1'b1;
         end
     end
 

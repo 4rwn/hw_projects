@@ -21,17 +21,15 @@ typedef enum logic [3:0] {
     NO_OP   // e
 } alu_op_t;
 
-typedef enum logic [3:0] {
-    UNKNOWN,    // 0
-    MATH,       // 1
-    LOAD,       // 2
-    STORE,      // 3
-    BRANCH,     // 4
-    JAL,        // 5
-    JALR,       // 6
-    LUI,        // 7
-    ENV,        // 8
-    NONE        // 9
+typedef enum logic [2:0] {
+    MATH,       // 0
+    LOAD,       // 1
+    STORE,      // 2
+    BRANCH,     // 3
+    JAL,        // 4
+    JALR,       // 5
+    LUI,        // 6
+    ENV         // 7
 } instr_type_t;
 
 typedef enum logic [2:0] {

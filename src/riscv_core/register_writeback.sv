@@ -5,6 +5,7 @@ module register_writeback (
     input logic rst_n,
 
     // Pipeline inputs
+    input logic in_valid,
     input instr_type_t in_instr_type,
     input mem_type_t in_mem_type,
     input logic [4:0] in_dest,
@@ -37,24 +38,32 @@ module register_writeback (
     end
 
     always_comb begin
-        reg_wr_en = 1'b1;
+        reg_wr_en = 1'b0;
         reg_wr_reg = in_dest;
-        case (in_instr_type)
-            MATH,
-            JAL,
-            JALR: reg_wr_data = in_res;
-            LOAD: reg_wr_data = _mem_rd;
-            LUI:  reg_wr_data = in_imm;
-            default: begin
-                reg_wr_en   = 1'b0;
-                reg_wr_data = 32'h0;
-            end
-        endcase
+        reg_wr_data = 32'b0;
+        if (in_valid) begin
+            case (in_instr_type)
+                MATH,
+                JAL,
+                JALR: begin
+                    reg_wr_en = 1'b1;
+                    reg_wr_data = in_res;
+                end
+                LOAD: begin
+                    reg_wr_en = 1'b1;
+                    reg_wr_data = _mem_rd;
+                end
+                LUI: begin
+                    reg_wr_en = 1'b1;
+                    reg_wr_data = in_imm;
+                end 
+            endcase
+        end
     end
 
     always_ff @( posedge clk ) begin
         if (rst_n) begin
-            if (in_instr_type == ENV) begin
+            if (in_valid && in_instr_type == ENV) begin
                 halt <= 1'b1;
             end
         end else begin

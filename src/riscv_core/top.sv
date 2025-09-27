@@ -44,7 +44,7 @@ module riscv_core #(
     */
     logic [31:0] if_addr;
     logic [31:0] if_instr;
-    instr_type_t if_instr_type;
+    logic if_valid;
     instruction_fetcher instr_fetch (
         .clk(clk),
         .rst_n(rst_n),
@@ -55,7 +55,7 @@ module riscv_core #(
 
         .out_addr(if_addr),
         .out_instr(if_instr),
-        .out_instr_type(if_instr_type),
+        .out_valid(if_valid),
 
         .instr_rd_addr(instr_rd_addr),
         .instr_rd_data(instr_rd_data)
@@ -67,6 +67,7 @@ module riscv_core #(
         Stage 2: Instruction Decode (ID)
     */
     logic [31:0] id_addr;
+    logic id_valid;
     instr_type_t id_instr_type;
     mem_type_t id_mem_type;
     alu_op_t id_op;
@@ -80,16 +81,10 @@ module riscv_core #(
         .jmp(jmp),
         .in_addr(if_addr),
         .in_instr(if_instr),
-        .in_instr_type(if_instr_type),
-
-        .id_instr_type(id_instr_type),
-        .id_dest(id_dest),
-        .ex_instr_type(ex_instr_type),
-        .ex_dest(ex_dest),
-        .mem_instr_type(mem_instr_type),
-        .mem_dest(mem_dest),
+        .in_valid(if_valid),
 
         .out_addr(id_addr),
+        .out_valid(id_valid),
         .out_instr_type(id_instr_type),
         .out_mem_type(id_mem_type),
         .out_op(id_op),
@@ -106,7 +101,23 @@ module riscv_core #(
         .reg_rd1_reg(reg_rd1_reg),
         .reg_rd2_reg(reg_rd2_reg),
         .reg_rd1_data(reg_rd1_data),
-        .reg_rd2_data(reg_rd2_data)
+        .reg_rd2_data(reg_rd2_data),
+
+        .id_valid(id_valid),
+        .id_instr_type(id_instr_type),
+        .id_dest(id_dest),
+        .id_imm(id_imm),
+        .ex_valid(ex_valid),
+        .ex_instr_type(ex_instr_type),
+        .ex_dest(ex_dest),
+        .ex_imm(ex_imm),
+        .ex_res(ex_res),
+        .mem_valid(mem_valid),
+        .mem_instr_type(mem_instr_type),
+        .mem_dest(mem_dest),
+        .mem_imm(mem_imm),
+        .mem_res(mem_res),
+        .mem_mem_rd(mem_mem_rd)
     );
 
 
@@ -114,6 +125,7 @@ module riscv_core #(
     /*
         Stage 3: Execution (EX)
     */
+    logic ex_valid;
     instr_type_t ex_instr_type;
     mem_type_t ex_mem_type;
     logic [4:0] ex_dest;
@@ -125,6 +137,7 @@ module riscv_core #(
         .rst_n(rst_n),
         
         .in_addr(id_addr),
+        .in_valid(id_valid),
         .in_instr_type(id_instr_type),
         .in_mem_type(id_mem_type),
         .in_op(id_op),
@@ -135,6 +148,7 @@ module riscv_core #(
         .in_rs2_data(id_rs2_data),
         .in_imm(id_imm),
 
+        .out_valid(ex_valid),
         .out_instr_type(ex_instr_type),
         .out_mem_type(ex_mem_type),
         .out_dest(ex_dest),
@@ -152,6 +166,7 @@ module riscv_core #(
     /*
         Stage 4: Memory Read/Write (MEM)
     */
+    logic mem_valid;
     instr_type_t mem_instr_type;
     mem_type_t mem_mem_type;
     logic [4:0] mem_dest;
@@ -163,6 +178,7 @@ module riscv_core #(
         .clk(clk),
         .rst_n(rst_n),
         
+        .in_valid(ex_valid),
         .in_instr_type(ex_instr_type),
         .in_mem_type(ex_mem_type),
         .in_dest(ex_dest),
@@ -170,6 +186,7 @@ module riscv_core #(
         .in_imm(ex_imm),
         .in_res(ex_res),
 
+        .out_valid(mem_valid),
         .out_instr_type(mem_instr_type),
         .out_mem_type(mem_mem_type),
         .out_dest(mem_dest),
@@ -198,6 +215,7 @@ module riscv_core #(
         .clk(clk),
         .rst_n(rst_n),
         
+        .in_valid(mem_valid),
         .in_instr_type(mem_instr_type),
         .in_mem_type(mem_mem_type),
         .in_dest(mem_dest),

@@ -141,6 +141,10 @@ To see the effects on area and frequency, I extended the design to support the R
 
 I undid this change again because it is not sensible by any stretch of the imagination, the respective Git commit is `79ce4e14f345b24087ae79808849028ffdc15232`.
 
+###
+
+I realized that my implementation was suboptimal or clumsy in some ways: For example, my instruction decoder just divided the instruction into opcode, funct3, ... but successive stages still had to parse the opcode. So I rewrote the whole design with this in mind and I went back to 5 stages because I had a hunch more stages might not be needed anymore with these changes so long as I kept the EX stage as slim as possible around the ALU. I gave the IF stage its own module and put all logic into the submodules where before the forwarding of pipeline signals was done at the top level. Before reimplementing register forwarding the results are a clock frequency of 78.36 MHz (+5.7%) and 4747 (+67.1%) used logic cells.
+
 ### Future Work
 
 * Branch prediction: There are ways to limit the amount of work that is lost as a result of instructions having to be flushed in branching. By only diverting control flow after EX we incur the maximal penalty on each jump and branch instruction. Different kinds of instructions can be optimized differently in this regard: A JAL can be pre-decoded during IF and the jump executed for the next fetch, avoiding completely having to flush anything. A JALR cannot be dealt with in the same way because the jump address depends on a source register, but these jump instructions are mainly used for function calls and returns and thus are not as performance critical anyway. On the other hand, branches are very important for performance and a branch predictor can offer many benefits. It works in the IF stage and tries to anticipate whether a branch will be taken solely based on its address.
