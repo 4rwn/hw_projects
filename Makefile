@@ -2,8 +2,6 @@ SRC = $(abspath src)
 TST = $(abspath tst)
 SIM = $(abspath sim)
 
-PROGRAM_FILE ?= $(TST)/test.s
-
 fifo:
 	@echo "Running FIFO test bench."
 	iverilog -g2012 -o $(SIM)/out $(SRC)/fifo.sv $(TST)/fifo_tb.sv
@@ -68,8 +66,11 @@ core_ts:
 
 core_vhdl: $(if $(strip $(PROGRAM_FILE)), compile)
 	@echo "Running RISCV core (VHDL)."
-	ghdl -a --std=08 $(SRC)/riscv_core_vhdl/*.vhd
-	ghdl -r --std=08 riscv_core_tb --stop-time=1us --vcd=waveform.vcd
+	ghdl -a --workdir=$(SIM) --std=08 $(SRC)/riscv_core_vhdl/memory.vhd \
+					 				  $(SRC)/riscv_core_vhdl/instruction_fetcher.vhd \
+					 				  $(SRC)/riscv_core_vhdl/top.vhd \
+					 				  $(SRC)/riscv_core_vhdl/riscv_core_tb.vhd
+	ghdl -r --workdir=$(SIM) --std=08 riscv_core_tb --stop-time=1us --vcd=$(SIM)/waveform.vcd
 
 view:
 	gtkwave $(SIM)/waveform.vcd $(TST)/view.gtkw
